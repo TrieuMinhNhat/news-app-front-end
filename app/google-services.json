@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "877045058997",
+    "project_id": "newsnotifier-9e53e",
+    "storage_bucket": "newsnotifier-9e53e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:877045058997:android:cb863362c64ae7c5865dfc",
+        "android_client_info": {
+          "package_name": "com.example.myapplication"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB7QlwJFCH8qZTucuy8h9NA_Cqmz2iMtoY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:877045058997:android:c9cf09e98fda5ca0865dfc",
+        "android_client_info": {
+          "package_name": "com.example.newsrecommendation"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB7QlwJFCH8qZTucuy8h9NA_Cqmz2iMtoY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
