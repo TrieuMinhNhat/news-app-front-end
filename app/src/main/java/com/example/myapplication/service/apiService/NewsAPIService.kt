@@ -1,16 +1,20 @@
 package com.example.myapplication.service.apiService
 
 
-import com.example.myapplication.data.NotificationPage
+import retrofit2.Response
+import com.example.myapplication.data.DeviceRequest
 import com.example.myapplication.data.NotificationResponse
 import com.example.myapplication.data.UnreadCountResponse
 import com.example.myapplication.models.Article
 import com.example.myapplication.models.DjangoPage
+import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.DELETE
 
 
 
@@ -38,6 +42,11 @@ interface NewsAPIService {
         @Header("X-DEVICE-TOKEN") deviceToken: String
     ): List<NotificationResponse>
 
+    @DELETE("api/notifications/{id}/")
+    suspend fun deleteNotification(
+        @Path("id") id: Long,
+        @Header("X-DEVICE-TOKEN") deviceToken: String
+    )
     @PUT("api/notifications/{id}/read/")
     suspend fun markNotificationRead(
         @Path("id") id: Long,
@@ -54,11 +63,19 @@ interface NewsAPIService {
         @Header("X-DEVICE-TOKEN") deviceToken: String
     ): UnreadCountResponse
 
+    @PUT("api/notifications/read_by_article/")
+    suspend fun markReadByArticle(
+        @Header("X-DEVICE-TOKEN") token: String,
+        @Body body: Map<String, String>
+    )
+    // Thêm vào interface NewsAPIService
+    @POST("api/register_device/")
+    suspend fun registerDevice(@Body body: DeviceRequest): Response<Unit> // hoặc data model trả về
     companion object {
         // Use http://10.0.2.2:8000/ if testing on Emulator and standard Django runserver
         // Use your actual IP if testing on a real device on the same Wifi.
         //const val BASE_URL =  "http://192.168.1.8:8000/"
-        const val BASE_URL =  "http://192.168.1.6:8000/"
+        const val BASE_URL =  "http://192.168.1.2:8000/"
 
     }
-}
+}//192.168.1.2

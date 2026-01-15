@@ -1,9 +1,7 @@
 package com.example.myapplication.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -17,10 +15,10 @@ import com.example.myapplication.ui.screens.HomeScreen
 import com.example.myapplication.ui.screens.DebugScreen
 import com.example.myapplication.ui.screens.InterestsScreen
 import com.example.newsapp.ui.topics.TopicsScreen
-import androidx.lifecycle.viewmodel.compose.viewModel // Make sure you have this
-import com.example.myapplication.ui.screens.NotificationScreen
+import com.example.myapplication.MainEvent
+import com.example.myapplication.ui.screens.NotificationRoute
 import com.example.myapplication.viewmodel.NotificationViewModel
-
+import androidx.compose.runtime.LaunchedEffect // Nhớ import cái này
 /**
  * Defines all the possible navigation destinations in the app.
  */
@@ -45,8 +43,26 @@ sealed class Screen(val route: String) {
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
+    mainEvent: androidx.compose.runtime.MutableState<MainEvent?>,
     notificationViewModel: NotificationViewModel = viewModel()
 ) {
+    LaunchedEffect(mainEvent.value) {
+        when (val event = mainEvent.value) {
+            is MainEvent.NotificationArrived -> {
+                event.articleId.toIntOrNull()?.let { articleId ->
+                    navController.navigate(Screen.Detail.createRoute(articleId))
+
+                    notificationViewModel.markAsReadByArticleId(event.articleId)
+                }
+                mainEvent.value = null
+            }
+            is MainEvent.RefreshNotification -> {
+                notificationViewModel.syncFromServer()
+                mainEvent.value = null
+            }
+            null -> Unit
+        }
+    }
     NavHost(
         navController = navController,
         startDestination = Screen.Interest.route
@@ -66,33 +82,14 @@ fun AppNavGraph(
             )
         }
 
-// Notification Screen - Uncomment and implement
+        // Notification Screen
         composable(Screen.Notification.route) {
-            // Collect state from ViewModel
-            val notifications by notificationViewModel.notifications.collectAsState()
-
-            // Refresh data when entering screen
-            LaunchedEffect(Unit) {
-                notificationViewModel.refreshData()
-            }
-
-            NotificationScreen(
-                notifications = notifications,
-                onBackClick = { navController.navigateUp() },
-                onNotificationClick = { item ->
-                    // 1. Mark as read
-                    notificationViewModel.markAsRead(item)
-                    // 2. Navigate to article if ID exists
-                    item.articleId?.let { id ->
-                        val intId = id.toIntOrNull()
-                        if (intId != null) {
-                            navController.navigate(Screen.Detail.createRoute(intId))
-                        }
-                    }
+            NotificationRoute(
+                onBack = { navController.navigateUp() },
+                onNavigateToArticle = {
+                    navController.navigate(Screen.Detail.createRoute(it))
                 },
-                onMarkAllRead = {
-                    notificationViewModel.markAllAsRead()
-                }
+                viewModel = notificationViewModel // Truyền viewmodel instance vào
             )
         }
         // Sign Up Screen
@@ -114,6 +111,7 @@ fun AppNavGraph(
                     navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Interest.route) { inclusive = true }
                     }
+
                 }
             )
         }
@@ -126,8 +124,10 @@ fun AppNavGraph(
                 },
                 onMenuClicked = { navController.navigate(Screen.Interest.route) },
                 onDebugClicked = { navController.navigate(Screen.Debug.route) },
-                notificationViewModel = notificationViewModel,
-                onNotificationIconClicked = { navController.navigate(Screen.Notification.route) }
+                onNotificationIconClicked = {
+                    navController.navigate(Screen.Notification.route)
+                },
+                notificationViewModel = notificationViewModel // ✅ INSTANCE
             )
         }
 

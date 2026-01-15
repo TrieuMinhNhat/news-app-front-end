@@ -3,8 +3,6 @@ package com.example.myapplication.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.os.Build
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -35,12 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.example.myapplication.MyFirebaseMessagingService
-import com.google.firebase.messaging.FirebaseMessaging
-import org.json.JSONObject
-import com.android.volley.Request
-import com.android.volley.toolbox.JsonObjectRequest
-import com.android.volley.toolbox.Volley
+
 /**
  * A screen that fetches and displays the current FCM token for debugging.
  */
@@ -51,37 +44,16 @@ fun DebugScreen(
 ) {
     var token by remember { mutableStateOf("Loading token...") }
     val context = LocalContext.current
-
-    // Fetch the token when the screen is first composed
+    // ADD THIS BLOCK:
     LaunchedEffect(Unit) {
-        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-            if (!task.isSuccessful) {
-                token = "Failed to get token: ${task.exception?.message}"
-                return@addOnCompleteListener
+        com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                token = task.result
+            } else {
+                token = "Error: ${task.exception?.message}"
             }
-
-            val fetchedToken = task.result ?: return@addOnCompleteListener
-            token = fetchedToken
-
-            // Gửi lên server
-            val json = JSONObject().apply {
-                put("token", fetchedToken)
-                put("device_name", Build.MODEL)
-            }
-
-//            val request = JsonObjectRequest(
-//                Request.Method.POST,
-//                "http://192.168.1.6:8000/api/register_token/",
-//                json,
-//                { response -> Log.d("API", "Registered successfully: $response") },
-//                { error -> Log.e("API", "Error: ${error.message}") }
-//            )
-//
-//            Volley.newRequestQueue(context).add(request)
         }
     }
-
-
     Scaffold(
         topBar = {
             TopAppBar(

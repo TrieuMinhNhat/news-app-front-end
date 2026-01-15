@@ -59,7 +59,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation("androidx.navigation:navigation-compose:2.7.7") // Or the latest version
     implementation(platform("com.google.firebase:firebase-bom:34.5.0"))
-
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.0") // Hoặc phiên bản mới hơn
     implementation("com.google.firebase:firebase-analytics")
 
     implementation("com.google.firebase:firebase-messaging:25.0.1")
@@ -68,6 +68,7 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.retrofit2:converter-moshi:2.9.0")
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
     // Async Image Loading
     implementation("io.coil-kt:coil-compose:2.4.0")
 

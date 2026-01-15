@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import androidx.paging.compose.LazyPagingItems
@@ -46,18 +47,21 @@ fun HomeScreen(
     onArticleClicked: (Article) -> Unit,
     onMenuClicked: () -> Unit,
     onDebugClicked: () -> Unit,
-    onNotificationIconClicked: () -> Unit, // Add this callback
+    onNotificationIconClicked: () -> Unit,
+
     newsViewModel: NewsViewModel = viewModel(),
     deviceViewModel: DeviceViewModel = viewModel(),
-    notificationViewModel: NotificationViewModel = viewModel() // Add this VM
+
+    notificationViewModel: NotificationViewModel
 ) {
     val articles = newsViewModel.articlePager.collectAsLazyPagingItems()
     val savedTopics by deviceViewModel.savedTopics.collectAsState()
     val savedKeywords by deviceViewModel.savedKeywords.collectAsState()
     val selectedTopic by newsViewModel.selectedTopic.collectAsState()
     val isInterestMode by newsViewModel.isInterestMode.collectAsState()
-    val navController = rememberNavController()
-    val unreadCount by notificationViewModel.unreadCount.collectAsState()
+    val notificationState by notificationViewModel.state.collectAsStateWithLifecycle()
+    val unreadCount = notificationState.unreadCount
+    val searchQuery by newsViewModel.searchQuery.collectAsState()
     Scaffold(
         topBar = {
             TopAppBar(
@@ -130,6 +134,11 @@ fun HomeScreen(
                 onTopicSelected = { newsViewModel.onTopicSelected(it) },
                 onInterestSelected = { newsViewModel.onInterestSelected(savedKeywords) },
                 onAddTopicClicked = onMenuClicked
+            )
+
+            NewsSearchBar(
+                query = searchQuery,
+                onQueryChange = { newsViewModel.onSearchQueryChanged(it) } //
             )
 
             // 2. Danh sách bài báo

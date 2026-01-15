@@ -1,7 +1,14 @@
 package com.example.myapplication.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -12,16 +19,21 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+
 import com.example.myapplication.data.NotificationUiModel
 import com.example.myapplication.ui.components.NotificationItem
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,57 +41,127 @@ fun NotificationScreen(
     notifications: List<NotificationUiModel>,
     onBackClick: () -> Unit,
     onNotificationClick: (NotificationUiModel) -> Unit,
-    onMarkAllRead: () -> Unit
+    onMarkAllRead: () -> Unit,
+    onDeleteNotification: (NotificationUiModel) -> Unit,
+    onUndoDelete: () -> Unit
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        "Thông báo",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    // Nút đánh dấu đã đọc tất cả
-                    IconButton(onClick = onMarkAllRead) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Đánh dấu tất cả đã đọc",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                )
-            )
-        }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = { TopAppBar( title = { Text( text = "Thông báo", style = MaterialTheme.typography.titleLarge.copy( fontWeight = FontWeight.Bold ) ) }, navigationIcon = { IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, contentDescription = "Back") } }, actions = { IconButton(onClick = onMarkAllRead) { Icon( Icons.Default.Check, contentDescription = "Mark all read", tint = MaterialTheme.colorScheme.primary ) } } ) }
     ) { innerPadding ->
-        if (notifications.isEmpty()) {
-            // Hiển thị Empty State nếu không có thông báo
+        if(notifications.isEmpty()){
             EmptyNotificationState(modifier = Modifier.padding(innerPadding))
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
+        }
+        else{
+            LazyColumn(modifier = Modifier.padding(innerPadding)) {
+
                 items(notifications, key = { it.id }) { item ->
-                    NotificationItem(
+                    NotificationSwipeItem(
                         notification = item,
-                        onClick = { onNotificationClick(item) }
+                        onClick = { onNotificationClick(item) },
+                        onDelete = { onDeleteNotification(item)
+                            scope.launch {
+                                // Hủy snackbar cũ nếu đang hiện - chưa tối uưu
+                                snackbarHostState.currentSnackbarData?.dismiss()
+
+                                val result = snackbarHostState.showSnackbar(
+                                    message = "Đã xóa thông báo",
+                                    actionLabel = "Hoàn tác",
+                                    duration = SnackbarDuration.Short // Khoảng 4s
+                                )
+                                if (result == SnackbarResult.ActionPerformed) {
+                                    onUndoDelete()
+                                }
+                            }
+                        }
                     )
                 }
             }
         }
+
     }
 }
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NotificationSwipeItem(
+    notification: NotificationUiModel,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var isVisible by remember(notification.id) { mutableStateOf(true) }
+    var pendingDelete by remember(notification.id) { mutableStateOf(false) }
+
+    val density = LocalDensity.current
+
+    // 🔥 Side-effect đúng chỗ
+    LaunchedEffect(pendingDelete) {
+        if (pendingDelete) {
+            delay(300) // chờ animation
+            onDelete()
+        }
+    }
+
+    val dismissState = remember(notification.id) {
+        SwipeToDismissBoxState(
+            initialValue = SwipeToDismissBoxValue.Settled,
+            density = density,
+            positionalThreshold = { it * 0.4f },
+            confirmValueChange = {
+                if (it == SwipeToDismissBoxValue.EndToStart) {
+                    isVisible = false          // animate out
+                    pendingDelete = true       // trigger side-effect
+                    false // ❗ UI controlled by state
+                } else false
+            }
+        )
+    }
+
+    AnimatedVisibility(
+        visible = isVisible,
+        exit = shrinkVertically() + fadeOut()
+    ) {
+        SwipeToDismissBox(
+            state = dismissState,
+            enableDismissFromStartToEnd = false,
+            backgroundContent = {
+                val color by animateColorAsState(
+                    if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart)
+                        MaterialTheme.colorScheme.errorContainer
+                    else MaterialTheme.colorScheme.surface,
+                    label = "bg"
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                        .background(color, shape = MaterialTheme.shapes.medium),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(end = 20.dp)
+                    )
+                }
+            },
+            content = {
+                NotificationItem(
+                    notification = notification,
+                    onClick = onClick
+                )
+            }
+        )
+    }
+}
+
+
 
 // Giao diện khi danh sách trống
 @Composable
@@ -104,6 +186,8 @@ fun EmptyNotificationState(modifier: Modifier = Modifier) {
         }
     }
 }
+
+
 
 @Preview(showBackground = true)
 @Composable
@@ -136,12 +220,12 @@ fun PreviewNotificationScreen() {
         )
     )
 
-    MaterialTheme {
-        NotificationScreen(
-            notifications = dummyData,
-            onBackClick = { /* Quay lại */ },
-            onNotificationClick = { /* Mở bài viết */ },
-            onMarkAllRead = { /* Gọi API mark all read */ }
-        )
-    }
+//    MaterialTheme {
+//        NotificationScreen(
+//            notifications = dummyData,
+//            onBackClick = { /* Quay lại */ },
+//            onNotificationClick = { /* Mở bài viết */ },
+//            onMarkAllRead = { /* Gọi API mark all read */ }
+//        )
+//    }
 }

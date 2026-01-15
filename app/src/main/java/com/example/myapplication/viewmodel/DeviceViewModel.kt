@@ -3,23 +3,33 @@ import android.os.Build
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.android.volley.Request
-import com.android.volley.toolbox.JsonObjectRequest
-import com.android.volley.toolbox.Volley
+
+import com.example.myapplication.data.DeviceRequest
 import com.example.myapplication.data.UserPreferences
-import com.example.myapplication.service.apiService.NewsAPIService.Companion.BASE_URL
+import com.example.myapplication.service.apiService.NewsAPIService
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import org.json.JSONArray
-import org.json.JSONObject
 
-// Chuyển sang AndroidViewModel để có Application Context dùng cho DataStore
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import kotlin.getValue
+
+
 class DeviceViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val apiService by lazy {
+        Retrofit.Builder()
+            .baseUrl(NewsAPIService.BASE_URL)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(NewsAPIService::class.java)
+    }
     private val userPrefs = UserPreferences(application)
 
     // StateFlow để UI lắng nghe
@@ -48,16 +58,28 @@ class DeviceViewModel(application: Application) : AndroidViewModel(application) 
                 _savedKeywords.value = set.toList()
             }
         }
+        // Lắng nghe Token từ UserPreferences
+        viewModelScope.launch {
+            userPrefs.fcmToken.collectLatest { token ->
+                _fcmToken.value = token
+            }
+        }
     }
 
     private fun fetchTokenOnce() {
-        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                val token = task.result
-                viewModelScope.launch {
-                    userPrefs.saveToken(token) // Lưu vào kho dùng chung
-                }
-                Log.d("FCM", "Token fetched and saved to DataStore")
+//        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+//            if (task.isSuccessful) {
+//                val token = task.result
+//                _fcmToken.value = token
+//                viewModelScope.launch {
+//                    userPrefs.saveToken(token) // Lưu vào kho dùng chung
+//                }
+//                Log.d("FCM", "Token fetched and saved to DataStore")
+//            }
+//        }
+        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+            viewModelScope.launch {
+                userPrefs.saveToken(token)
             }
         }
     }
@@ -75,26 +97,24 @@ class DeviceViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun syncDeviceToServer(topics: List<String>, keywords: List<String>) {
-        val token = _fcmToken.value
-        if (token == null) {
-            Log.e("API", "Token chưa có, không thể sync server")
-            return
-        }
+        viewModelScope.launch {
+            val token = fcmToken.filterNotNull().first()
 
-        val json = JSONObject().apply {
-            put("token", token)
-            put("device_name", Build.MODEL)
-            put("keywords", JSONArray(keywords))
-            put("topics", JSONArray(topics))
-        }
+            val request = DeviceRequest(
+                token = token,
+                device_name = Build.MODEL,
+                keywords = keywords,
+                topics = topics
+            )
 
-        val request = JsonObjectRequest(
-            Request.Method.POST,
-            "$BASE_URL/api/register_device/",
-            json,
-            { response -> Log.d("API", "Sync success: $response") },
-            { error -> Log.e("API", "Sync error: ${error.message}") }
-        )
-        Volley.newRequestQueue(getApplication()).add(request)
+            try {
+                val response = apiService.registerDevice(request)
+                if (response.isSuccessful) {
+                    Log.d("DeviceViewModel", "Sync success")
+                }
+            } catch (e: Exception) {
+                Log.e("DeviceViewModel", "Sync error", e)
+            }
+        }
     }
 }
