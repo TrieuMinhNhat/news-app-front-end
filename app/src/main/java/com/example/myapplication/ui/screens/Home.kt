@@ -11,8 +11,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.FiberNew
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
@@ -30,13 +28,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.compose.rememberNavController
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.AsyncImage
 import com.example.myapplication.models.Article
 import com.example.myapplication.viewmodel.NewsViewModel
 import com.example.myapplication.viewmodel.NotificationViewModel
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.rememberCoroutineScope
+import com.example.myapplication.viewmodel.FacebookViewModel
+import kotlinx.coroutines.launch
 
 /**
  * Màn hình chính hiển thị danh sách tin tức.
@@ -48,111 +50,116 @@ fun HomeScreen(
     onMenuClicked: () -> Unit,
     onDebugClicked: () -> Unit,
     onNotificationIconClicked: () -> Unit,
-
     newsViewModel: NewsViewModel = viewModel(),
     deviceViewModel: DeviceViewModel = viewModel(),
-
+    facebookViewModel: FacebookViewModel = viewModel(), // Add this
     notificationViewModel: NotificationViewModel
 ) {
     val articles = newsViewModel.articlePager.collectAsLazyPagingItems()
+    val facebookPosts = facebookViewModel.postPager.collectAsLazyPagingItems()
+
     val savedTopics by deviceViewModel.savedTopics.collectAsState()
     val savedKeywords by deviceViewModel.savedKeywords.collectAsState()
     val selectedTopic by newsViewModel.selectedTopic.collectAsState()
     val isInterestMode by newsViewModel.isInterestMode.collectAsState()
     val notificationState by notificationViewModel.state.collectAsStateWithLifecycle()
-    val unreadCount = notificationState.unreadCount
     val searchQuery by newsViewModel.searchQuery.collectAsState()
+
+    // Tab State
+    val tabs = listOf("Tin tức", "Mạng xã hội")
+    val pagerState = rememberPagerState(pageCount = { tabs.size })
+    val scope = rememberCoroutineScope()
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        "Tin tức hôm nay",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onMenuClicked) {
-                        Icon(
-                            imageVector = Icons.Default.Menu,
-                            contentDescription = "Navigation Menu"
-                        )
-                    }
-                },
-                // --- PHẦN THÊM VÀO ---
-                actions = {
-                    IconButton(onClick = onNotificationIconClicked) {
-                        BadgedBox(
-                            badge = {
-                                if (unreadCount > 0) {
-                                    Badge {
-                                        Text(text = unreadCount.toString())
+            Column(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
+                TopAppBar(
+                    title = {
+                        Text("Hot News", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onMenuClicked) {
+                            Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = onNotificationIconClicked) {
+                            BadgedBox(
+                                badge = {
+                                    if (notificationState.unreadCount > 0) {
+                                        Badge { Text(notificationState.unreadCount.toString()) }
                                     }
                                 }
+                            ) {
+                                Icon(Icons.Default.Notifications, contentDescription = "Thông báo")
                             }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Notifications,
-                                contentDescription = "Thông báo"
-                            )
                         }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    // Màu nền trùng với Surface của TopicBar để tạo cảm giác liền mạch
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                )
 
-            )
-        },
-//        floatingActionButton = {
-//            FloatingActionButton(
-//                onClick = onDebugClicked,
-//                containerColor = MaterialTheme.colorScheme.primary,
-//                contentColor = MaterialTheme.colorScheme.onPrimary
-//            ) {
-//                Icon(Icons.Default.Build, contentDescription = "Debug Info")
-//            }
-//        }
+                PrimaryTabRow(
+                    selectedTabIndex = pagerState.currentPage,
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    indicator = {
+                        TabRowDefaults.PrimaryIndicator(
+                            modifier = Modifier.tabIndicatorOffset(pagerState.currentPage),
+                            width = 60.dp
+                        )
+                    }
+                ) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = pagerState.currentPage == index,
+                            onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                            text = {
+                                Text(
+                                    text = title,
+                                    style = if (pagerState.currentPage == index)
+                                        MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                                    else MaterialTheme.typography.titleSmall
+                                )
+                            }
+                        )
+                    }
+                }
+            }
+        }
     ) { innerPadding ->
-        // Cấu trúc layout chính
-        Column(
+        HorizontalPager(
+            state = pagerState,
             modifier = Modifier
                 .fillMaxSize()
-                // CHỈ LẤY padding TOP để tránh thanh Topic bị đè,
-                // KHÔNG lấy padding ngang/đáy ở đây để TopicBar tràn viền.
-                .padding(top = innerPadding.calculateTopPadding())
-        ) {
-
-            // 1. Thanh chủ đề (Topic Bar) - Tràn viền ngang
-            PersonalizedTopicBar(
-                savedTopics = savedTopics.toList(),
-                savedKeywords = savedKeywords,
-                selectedTopic = selectedTopic,
-                isInterestMode = isInterestMode,
-                onTopicSelected = { newsViewModel.onTopicSelected(it) },
-                onInterestSelected = { newsViewModel.onInterestSelected(savedKeywords) },
-                onAddTopicClicked = onMenuClicked
-            )
-
-            NewsSearchBar(
-                query = searchQuery,
-                onQueryChange = { newsViewModel.onSearchQueryChanged(it) } //
-            )
-
-            // 2. Danh sách bài báo
-            ArticleList(
-                articles = articles,
-                onArticleClicked = onArticleClicked,
-                // Đẩy padding đáy xuống đây để list không bị che bởi NavigationBar/FAB
-                contentPadding = PaddingValues(
-                    bottom = innerPadding.calculateBottomPadding() + 80.dp, // +80dp để né FAB
-                    top = 16.dp,
-                    start = 16.dp,
-                    end = 16.dp
-                )
-            )
+                .padding(top = innerPadding.calculateTopPadding()),
+            verticalAlignment = Alignment.Top
+        ) { pageIndex ->
+            when (pageIndex) {
+                0 -> { // NEWS PAGE
+                    Column {
+                        PersonalizedTopicBar(
+                            savedTopics = savedTopics.toList(),
+                            savedKeywords = savedKeywords,
+                            selectedTopic = selectedTopic,
+                            isInterestMode = isInterestMode,
+                            onTopicSelected = { newsViewModel.onTopicSelected(it) },
+                            onInterestSelected = { newsViewModel.onInterestSelected(savedKeywords) },
+                            onAddTopicClicked = onMenuClicked
+                        )
+                        NewsSearchBar(
+                            query = searchQuery,
+                            onQueryChange = { newsViewModel.onSearchQueryChanged(it) }
+                        )
+                        ArticleList(
+                            articles = articles,
+                            onArticleClicked = onArticleClicked,
+                            contentPadding = PaddingValues(16.dp)
+                        )
+                    }
+                }
+                1 -> { // FACEBOOK PAGE
+                    FacebookFeedList(posts = facebookPosts)
+                }
+            }
         }
     }
 }

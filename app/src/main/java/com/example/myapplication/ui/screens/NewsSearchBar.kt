@@ -38,7 +38,7 @@ fun NewsSearchBar(
                 }
             }
         },
-        shape = MaterialTheme.shapes.extraLarge, // Bo tròn nhiều cho giống thanh search
+        shape = MaterialTheme.shapes.extraLarge,
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = MaterialTheme.colorScheme.surface,
             unfocusedContainerColor = MaterialTheme.colorScheme.surface,

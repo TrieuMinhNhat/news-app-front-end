@@ -3,13 +3,10 @@ package com.example.myapplication.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.paging.Pager
-import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
+import com.example.myapplication.data.repository.NewsRepository
 import com.example.myapplication.models.Article
-import com.example.myapplication.models.ArticlePagingSource
-import com.example.myapplication.service.apiService.NewsAPIService
-
+import com.example.myapplication.service.apiService.RetrofitProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,23 +14,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 
 class NewsViewModel  : ViewModel(){
-    private val apiService by lazy {
-        Retrofit.Builder()
-            .baseUrl(NewsAPIService.BASE_URL)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(NewsAPIService::class.java)
-    }
-    // State for the current search query (null means show all)
+
+    private val repo = NewsRepository(
+        RetrofitProvider.apiService
+    )
     val searchQuery = MutableStateFlow("")
     val selectedTopic = MutableStateFlow<String?>(null)
     val isInterestMode = MutableStateFlow(false)
     private val userKeywords = MutableStateFlow<List<String>>(emptyList())
-    // Use flatMapLatest to restart the Pager whenever searchQuery changes
     @OptIn(ExperimentalCoroutinesApi::class)
     val articlePager = combine(
         searchQuery, selectedTopic, isInterestMode, userKeywords
@@ -44,13 +34,7 @@ class NewsViewModel  : ViewModel(){
         val finalKeywords: String? = if (keywords.isNotEmpty()) keywords.joinToString(",") else null
         val finalTopic: String? = if (finalKeywords == null && topic != null) topic else null
 
-        Pager(PagingConfig(pageSize = 20)) {
-            ArticlePagingSource(
-                apiService,
-                keywords = finalKeywords,
-                topic = finalTopic
-            )
-        }.flow
+        repo.pager(finalKeywords,finalTopic)
     }.cachedIn(viewModelScope)
 
     fun onTopicSelected(topic: String?) {
@@ -95,7 +79,7 @@ class NewsViewModel  : ViewModel(){
             _isLoadingDetail.value = true
             _errorMessage.value = null
             try {
-                val article = apiService.getArticleDetail(articleId)
+                val article = repo.getArticleDetail(articleId)
                 _articleDetail.value = article
             } catch (e: Exception) {
                 e.printStackTrace()

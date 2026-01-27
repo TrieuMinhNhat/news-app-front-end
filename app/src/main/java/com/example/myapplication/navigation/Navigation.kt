@@ -19,6 +19,7 @@ import com.example.myapplication.MainEvent
 import com.example.myapplication.ui.screens.NotificationRoute
 import com.example.myapplication.viewmodel.NotificationViewModel
 import androidx.compose.runtime.LaunchedEffect // Nhớ import cái này
+
 /**
  * Defines all the possible navigation destinations in the app.
  */
@@ -116,7 +117,6 @@ fun AppNavGraph(
             )
         }
 
-        // Home Screen
         composable(Screen.Home.route) {
             HomeScreen(
                 onArticleClicked = { article ->
@@ -131,14 +131,12 @@ fun AppNavGraph(
             )
         }
 
-        // Topics Screen
         composable(Screen.Topics.route) {
             TopicsScreen(
                 onBackClicked = { navController.navigateUp() }
             )
         }
 
-        // 🔥 Article Detail + Deep Link
         composable(
             route = Screen.Detail.route,
             arguments = listOf(
@@ -158,7 +156,6 @@ fun AppNavGraph(
             )
         }
 
-        // Debug screen
         composable(Screen.Debug.route) {
             DebugScreen(
                 onBackClicked = { navController.navigateUp() }

@@ -3,6 +3,7 @@ package com.example.myapplication.service.apiService
 
 import retrofit2.Response
 import com.example.myapplication.data.DeviceRequest
+import com.example.myapplication.data.FacebookResponse
 import com.example.myapplication.data.NotificationResponse
 import com.example.myapplication.data.UnreadCountResponse
 import com.example.myapplication.models.Article
@@ -19,6 +20,7 @@ import retrofit2.http.DELETE
 
 
 interface NewsAPIService {
+
     @GET("api/articles/")
     suspend fun getArticles(
         @Query("page") page: Int,
@@ -74,8 +76,15 @@ interface NewsAPIService {
     companion object {
         // Use http://10.0.2.2:8000/ if testing on Emulator and standard Django runserver
         // Use your actual IP if testing on a real device on the same Wifi.
-        //const val BASE_URL =  "http://192.168.1.8:8000/"
         const val BASE_URL =  "http://192.168.1.2:8000/"
+        //const val BASE_URL =  "http://127.0.0.1:8000/"
 
     }
-}//192.168.1.2
+
+    //===FB post ===
+    @GET("api/fb/posts/")
+    suspend fun getFacebookPosts(
+        @Query("page") page: Int
+
+    ): FacebookResponse
+}//192.168.1.12

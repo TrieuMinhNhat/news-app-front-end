@@ -6,7 +6,9 @@ import androidx.lifecycle.viewModelScope
 
 import com.example.myapplication.data.DeviceRequest
 import com.example.myapplication.data.UserPreferences
+import com.example.myapplication.data.repository.DeviceRepository
 import com.example.myapplication.service.apiService.NewsAPIService
+import com.example.myapplication.service.apiService.RetrofitProvider
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,13 +25,11 @@ import kotlin.getValue
 
 class DeviceViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val apiService by lazy {
-        Retrofit.Builder()
-            .baseUrl(NewsAPIService.BASE_URL)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(NewsAPIService::class.java)
-    }
+
+
+    private val repo = DeviceRepository(
+        RetrofitProvider.apiService
+    )
     private val userPrefs = UserPreferences(application)
 
     // StateFlow để UI lắng nghe
@@ -108,7 +108,7 @@ class DeviceViewModel(application: Application) : AndroidViewModel(application) 
             )
 
             try {
-                val response = apiService.registerDevice(request)
+                val response = repo.registerDevice(request)
                 if (response.isSuccessful) {
                     Log.d("DeviceViewModel", "Sync success")
                 }

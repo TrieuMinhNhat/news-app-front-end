@@ -1,8 +1,12 @@
+import org.gradle.kotlin.dsl.implementation
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
+    id ("kotlin-kapt")
+    alias(libs.plugins.hilt.android)
 }
 
 android {
@@ -41,7 +45,8 @@ android {
 }
 
 dependencies {
-
+    implementation(libs.hilt.android) // Use the alias from the catalog
+    kapt(libs.hilt.compiler)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

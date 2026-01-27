@@ -11,21 +11,15 @@ import com.example.myapplication.viewmodel.NotificationViewModel
 
 @Composable
 fun NotificationRoute(
-    // Bỏ tham số mainEvent ở đây vì không dùng nữa
     onBack: () -> Unit,
     onNavigateToArticle: (Int) -> Unit,
     viewModel: NotificationViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-
-    // ❌ XÓA hoặc COMMENT LẠI khối LaunchedEffect(mainEvent.value) cũ ở đây
-    // Vì nó đã được chuyển sang AppNavGraph
-
     NotificationScreen(
         notifications = state.items,
         onBackClick = onBack,
         onNotificationClick = { notification ->
-            // Logic xử lý khi click vào item trong danh sách
             viewModel.markAsRead(notification.id)
             notification.articleId?.toIntOrNull()?.let(onNavigateToArticle)
         },

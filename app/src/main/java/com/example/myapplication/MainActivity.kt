@@ -95,3 +95,5 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+//cd C:\Users\ADMIN\AppData\Local\Android\Sdk\platform-tools
+// ./adb connect 192.168.1.22:33375

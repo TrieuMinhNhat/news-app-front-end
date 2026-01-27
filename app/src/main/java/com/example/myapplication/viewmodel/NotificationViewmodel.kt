@@ -8,7 +8,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.NotificationUiModel
 import com.example.myapplication.data.UserPreferences
-import com.example.myapplication.service.apiService.NewsAPIService
+import com.example.myapplication.data.repository.NotificationRepository
+import com.example.myapplication.service.apiService.RetrofitProvider
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,8 +18,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
@@ -31,13 +30,9 @@ data class NotificationState(
 
 class NotificationViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val apiService by lazy {
-        Retrofit.Builder()
-            .baseUrl(NewsAPIService.BASE_URL)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(NewsAPIService::class.java)
-    }
+    private val repo = NotificationRepository(
+        RetrofitProvider.apiService
+    )
 
     private val userPrefs = UserPreferences(application)
     private var lastDeleted: NotificationUiModel? = null
@@ -76,7 +71,7 @@ class NotificationViewModel(application: Application) : AndroidViewModel(applica
             _state.update { it.copy(isLoading = true) }
 
             try {
-                val response = apiService.getNotifications(token)
+                val response = repo.getNotifications(token)
                 val uiModels = response.map {
                     NotificationUiModel(
                         id = it.id,
@@ -157,7 +152,7 @@ class NotificationViewModel(application: Application) : AndroidViewModel(applica
         val token = currentToken ?: return
         viewModelScope.launch {
             try {
-                apiService.deleteNotification(item.id, token)
+                repo.deleteNotification(item.id, token)
                 Log.d("NotifVM", "Deleted ${item.id} on server")
             } catch (e: Exception) {
                 // Xử lý lỗi nếu cần (ít xảy ra), thầm lặng sync lại
@@ -183,7 +178,7 @@ class NotificationViewModel(application: Application) : AndroidViewModel(applica
 
         viewModelScope.launch {
             try {
-                apiService.markNotificationRead(id, token)
+                repo.markRead(id, token)
             } catch (e: Exception) {
                 syncFromServer()
             }
@@ -225,7 +220,7 @@ class NotificationViewModel(application: Application) : AndroidViewModel(applica
         viewModelScope.launch {
             try {
                 // Gọi API báo server
-                apiService.markReadByArticle(
+                repo.markReadByArticle(
                     token = token,
                     body = mapOf("article_id" to articleId)
                 )
@@ -255,7 +250,7 @@ class NotificationViewModel(application: Application) : AndroidViewModel(applica
 
         viewModelScope.launch {
             try {
-                apiService.markAllRead(token)
+                repo.markAllRead(token)
             } catch (e: Exception) {
                 syncFromServer()
             }
