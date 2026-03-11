@@ -10,7 +10,7 @@ class NewsRepository(
 ) {
     fun pager(keywords: String?, topic: String?) =
         Pager(PagingConfig(pageSize = 20)) {
-            ArticlePagingSource(api, keywords, topic)
+            ArticlePagingSource(api, keywords = keywords, topic =  topic)
         }.flow
 
     suspend fun getArticleDetail(id: Int?) =

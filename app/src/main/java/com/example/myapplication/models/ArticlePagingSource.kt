@@ -7,7 +7,7 @@ import kotlin.let
 import com.example.myapplication.service.apiService.NewsAPIService
 class ArticlePagingSource(
     private val apiService: NewsAPIService,
-    private val query: String? = null,
+    //private val query: String? = null,
     private val topic: String? = null, // Đã đổi tên thành topic
     private val keywords: String? = null
 
@@ -16,20 +16,26 @@ class ArticlePagingSource(
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Article> {
         return try {
             val page = params.key ?: 1
-            val response = if (!query.isNullOrBlank()) {
-                // 🔍 SEARCH MODE
-                apiService.searchArticles(
-                    query = query,
-                    page = page
-                )
-            } else {
-                // 📰 NORMAL MODE
-                apiService.getArticles(
+//            val response = if (!query.isNullOrBlank()) {
+//                // 🔍 SEARCH MODE
+//                apiService.searchArticles(
+//                    query = query,
+//                    page = page
+//                )
+//            } else {
+//                // 📰 NORMAL MODE
+//                apiService.getArticles(
+//                    page = page,
+//                    topic = topic,
+//                    keywords = keywords
+//                )
+//            }
+            val response = apiService.getArticles(
                     page = page,
                     topic = topic,
                     keywords = keywords
-                )
-            }
+            )
+
             LoadResult.Page(
                 data = response.results,
                 prevKey = if (page > 1) page - 1 else null,

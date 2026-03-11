@@ -33,11 +33,12 @@ fun NewsSearchBar(
         },
         trailingIcon = {
             if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
+                IconButton(onClick = { onQueryChange(query) }) {
                     Icon(Icons.Default.Clear, contentDescription = "Clear Icon")
                 }
             }
         },
+
         shape = MaterialTheme.shapes.extraLarge,
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = MaterialTheme.colorScheme.surface,

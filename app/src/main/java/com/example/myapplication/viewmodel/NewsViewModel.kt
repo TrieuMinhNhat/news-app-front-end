@@ -31,9 +31,17 @@ class NewsViewModel  : ViewModel(){
         Triple(query, topic, if (interestMode) keywords else emptyList())
     }.flatMapLatest { (query, topic, keywords) ->
 
-        val finalKeywords: String? = if (keywords.isNotEmpty()) keywords.joinToString(",") else null
-        val finalTopic: String? = if (finalKeywords == null && topic != null) topic else null
+        // 🔥 FIX: Use 'query' if it exists.
+        // Order of priority: Search Query > Interest Keywords > None
+        val finalKeywords: String? = when {
+            query.isNotBlank() -> query
+            keywords.isNotEmpty() -> keywords.joinToString(",")
+            else -> null
+        }
 
+        // Keep existing logic: If we have keywords (Search or Interest), ignore specific topic
+        // unless your API supports filtering Topic + Keywords together.
+        val finalTopic: String? = if (finalKeywords == null && topic != null) topic else null
         repo.pager(finalKeywords,finalTopic)
     }.cachedIn(viewModelScope)
 
