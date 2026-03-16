@@ -76,7 +76,7 @@ interface NewsAPIService {
     companion object {
         // Use http://10.0.2.2:8000/ if testing on Emulator and standard Django runserver
         // Use your actual IP if testing on a real device on the same Wifi.
-        const val BASE_URL =  "http://192.168.1.19:8000/"
+        const val BASE_URL =  "http://192.168.1.5:8000/"
         //const val BASE_URL =  "http://127.0.0.1:8000/"
 
     }

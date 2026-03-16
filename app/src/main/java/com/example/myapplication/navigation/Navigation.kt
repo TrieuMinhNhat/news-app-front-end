@@ -1,5 +1,7 @@
 package com.example.myapplication.navigation
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -66,7 +68,20 @@ fun AppNavGraph(
     }
     NavHost(
         navController = navController,
-        startDestination = Screen.Interest.route
+        startDestination = Screen.Interest.route,
+        enterTransition = {
+            slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(300))
+        },
+        exitTransition = {
+            slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(300))
+        },
+        popEnterTransition = {
+            slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(300))
+        },
+        popExitTransition = {
+            slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(300))
+        }
+
     ) {
 
         // Login Screen
@@ -152,7 +167,7 @@ fun AppNavGraph(
 
             ArticleDetailScreen(
                 articleId = articleId,
-                onBackClicked = { navController.navigateUp() }
+                onBackClicked = { navController.navigateUp()},
             )
         }
 

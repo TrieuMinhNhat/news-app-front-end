@@ -2,13 +2,11 @@ package com.example.myapplication.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -98,7 +96,6 @@ fun NotificationSwipeItem(
 
     val density = LocalDensity.current
 
-    // 🔥 Side-effect đúng chỗ
     LaunchedEffect(pendingDelete) {
         if (pendingDelete) {
             delay(300) // chờ animation
@@ -115,7 +112,7 @@ fun NotificationSwipeItem(
                 if (it == SwipeToDismissBoxValue.EndToStart) {
                     isVisible = false          // animate out
                     pendingDelete = true       // trigger side-effect
-                    false // ❗ UI controlled by state
+                    false
                 } else false
             }
         )
@@ -219,13 +216,5 @@ fun PreviewNotificationScreen() {
             articleId = "125"
         )
     )
-
-//    MaterialTheme {
-//        NotificationScreen(
-//            notifications = dummyData,
-//            onBackClick = { /* Quay lại */ },
-//            onNotificationClick = { /* Mở bài viết */ },
-//            onMarkAllRead = { /* Gọi API mark all read */ }
-//        )
-//    }
+    
 }

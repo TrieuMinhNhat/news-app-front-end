@@ -181,16 +181,16 @@ fun KeyWordSubscription(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(
-            text = "Keyword Subscriptions",
-            style = MaterialTheme.typography.titleLarge
-        )
+//        Text(
+//            text = "Keyword Subscriptions",
+//            style = MaterialTheme.typography.titleLarge
+//        )
 
         // Input field for adding new keywords
         OutlinedTextField(
             value = text,
             onValueChange = { text = it },
-            label = { Text("Add a keyword") },
+            label = { Text("Thêm từ khóa") },
             modifier = Modifier.fillMaxWidth(),
             trailingIcon = {
                 IconButton(
@@ -244,7 +244,7 @@ fun KeyWordSubscription(
             }
         } else {
             Text(
-                text = "You haven't added any keywords yet.",
+                text = "Bạn chưa thêm từ khóa nào.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

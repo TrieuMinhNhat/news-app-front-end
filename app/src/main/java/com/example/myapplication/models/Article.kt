@@ -12,4 +12,5 @@ data class Article(
     @SerializedName("image_link") val imageUrl: List<String> = emptyList(),
     val categories: List<String> = emptyList(),
     val author: String? = null,
+    @SerializedName("publisher") val source: String? = null,
 )

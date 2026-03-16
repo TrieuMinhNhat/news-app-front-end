@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -14,8 +16,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.models.Article
 import coil.compose.AsyncImage
@@ -56,7 +60,9 @@ fun ArticleDetailScreen(
                 topBar = {
 
                     TopAppBar(
-                        title = { Text(article!!.author?: "Unknown") },
+                        title = { Text(
+                            " "
+                        ) },
                         navigationIcon = {
                             IconButton(onClick = onBackClicked) {
                                 Icon(
@@ -65,9 +71,18 @@ fun ArticleDetailScreen(
                                 )
                             }
                         },
+                        actions = {
+                                IconButton(onClick = { /* TODO: share */ }) {
+                                    Icon(Icons.Default.Share, contentDescription = "Share")
+                                }
+                                IconButton(onClick = { /* TODO: toggle bookmark */ }) {
+                                    Icon(Icons.Default.BookmarkBorder, contentDescription = "Bookmark")
+                                }
+
+                        },
                         colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            titleContentColor = MaterialTheme.colorScheme.onSurface
                         )
                     )
                 }
@@ -98,34 +113,44 @@ fun ArticleDetailScreen(
                         }
                     }
 
-                    // Article Content
+                    // 2. Title + Byline
                     item {
                         Column(
-                            modifier = Modifier.padding(16.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 24.dp)
                         ) {
-                            // Title
                             Text(
                                 text = article!!.title,
-                                style = MaterialTheme.typography.headlineSmall,
+                                style = MaterialTheme.typography.headlineLarge,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(bottom = 8.dp)
+                                lineHeight = 32.sp
                             )
 
-                            // Source
-                            Text(
-                                text = "Source: ${article!!.author}",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(bottom = 16.dp)
-                            )
+                            Spacer(modifier = Modifier.height(12.dp))
 
-                            // Body
-                            // We use the description as a stand-in for the full article text.
-                            // In a real app, you'd have a separate 'content' field.
-                            val fullArticleText = article!!.description
                             Text(
-                                text = fullArticleText,
-                                style = MaterialTheme.typography.bodyLarge
+                                text = "By ${article!!.author} • ${article!!.source ?: "Unknown"}",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    // 3. Article Body
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp)
+                        ) {
+                            Text(
+                                text = article!!.description, // replace with full content when you add it
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    lineHeight = 26.sp,           // excellent readability
+                                    textAlign = TextAlign.Start
+                                ),
+                                modifier = Modifier.padding(bottom = 40.dp)
                             )
                         }
                     }

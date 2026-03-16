@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,25 +25,41 @@ import coil.compose.AsyncImage
 import com.example.myapplication.models.FacebookPost
 import com.example.myapplication.viewmodel.FacebookViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FacebookFeedList(
     posts: LazyPagingItems<FacebookPost>
 ) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        items(posts.itemCount) { index ->
-            posts[index]?.let { FacebookPostCard(it) }
-        }
 
-        // Add loading indicators
-        posts.apply {
-            if (loadState.refresh is LoadState.Loading || loadState.append is LoadState.Loading) {
+    val isRefreshing = posts.loadState.refresh is LoadState.Loading
+
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = { posts.refresh() }
+    ) {
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+
+            items(
+                count = posts.itemCount,
+                key = { index -> posts[index]?.id ?: index }
+            ) { index ->
+                posts[index]?.let { FacebookPostCard(it) }
+            }
+
+            if (posts.loadState.append is LoadState.Loading) {
                 item {
-                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
                     }
                 }
             }
@@ -63,11 +80,15 @@ fun FacebookPostCard(post: FacebookPost) {
                 // Circular Placeholder for Source Icon
                 Surface(
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                    modifier = Modifier.size(40.dp)
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.size(42.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text(post.sourceName?.take(1) ?: "?", color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            text = post.sourceName?.take(1)?.uppercase() ?: "?",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     }
                 }
                 Spacer(modifier = Modifier.width(12.dp))
@@ -99,7 +120,10 @@ fun FacebookPostCard(post: FacebookPost) {
                 AsyncImage(
                     model = post.images.first(),
                     contentDescription = "Post Image",
-                    modifier = Modifier.fillMaxSize(),
+                    modifier =  Modifier
+                        .fillMaxWidth()
+                        .height(220.dp)
+                        .clip(MaterialTheme.shapes.medium),
                     contentScale = ContentScale.Crop
                 )
             }

@@ -33,7 +33,7 @@ fun NewsSearchBar(
         },
         trailingIcon = {
             if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange(query) }) {
+                IconButton(onClick = { onQueryChange(" ") }) {
                     Icon(Icons.Default.Clear, contentDescription = "Clear Icon")
                 }
             }
