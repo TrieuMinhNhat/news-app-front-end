@@ -5,7 +5,10 @@ import androidx.paging.PagingState
 import com.example.myapplication.service.apiService.NewsAPIService
 
 class FacebookPagingSource(
-    private val apiService: NewsAPIService
+    private val apiService: NewsAPIService,
+    private val token: String,
+    private val keywords: String? = null,
+    private val sortKeyword: String? = null
 ) : PagingSource<Int, FacebookPost>() {
 
     override fun getRefreshKey(state: PagingState<Int, FacebookPost>): Int? {
@@ -18,7 +21,12 @@ class FacebookPagingSource(
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, FacebookPost> {
         return try {
             val page = params.key ?: 1
-            val response = apiService.getFacebookPosts(page = page)
+            val response = apiService.getFacebookPosts(
+                token = token,
+                page = page,
+                keywords = keywords,
+                sortKeyword = sortKeyword
+            )
 
             // Check if there is a next page based on the "next" field being null or not
             val nextKey = if (response.next != null) page + 1 else null

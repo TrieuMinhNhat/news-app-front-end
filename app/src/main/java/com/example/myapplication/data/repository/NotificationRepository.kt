@@ -1,8 +1,9 @@
 package com.example.myapplication.data.repository
 
 import com.example.myapplication.service.apiService.NewsAPIService
+import javax.inject.Inject
 
-class NotificationRepository(
+class NotificationRepository @Inject constructor(
     private val api: NewsAPIService
 ) {
     suspend fun getNotifications(token: String) =

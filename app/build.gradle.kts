@@ -13,6 +13,8 @@ android {
     namespace = "com.example.myapplication"
     compileSdk = 36
 
+    flavorDimensions += "env"
+
     defaultConfig {
         applicationId = "com.example.myapplication"
         minSdk = 24
@@ -21,6 +23,19 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    productFlavors {
+        create("dev") {
+            dimension = "env"
+            buildConfigField("String", "API_BASE_URL", "\"http://192.168.1.4:8000/\"")
+            manifestPlaceholders["deepLinkHost"] = "192.168.1.5"
+        }
+        create("prod") {
+            dimension = "env"
+            buildConfigField("String", "API_BASE_URL", "\"https://yourdomain.com/\"")
+            manifestPlaceholders["deepLinkHost"] = "yourdomain.com"
+        }
     }
 
     buildTypes {
@@ -41,6 +56,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -84,6 +100,7 @@ dependencies {
 
     // data storage
     implementation("androidx.datastore:datastore-preferences:1.0.0")
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     implementation("androidx.compose.material:material-icons-extended:1.6.8")
 }

@@ -1,6 +1,7 @@
 package com.example.myapplication.di
 
 
+import com.example.myapplication.BuildConfig
 import com.example.myapplication.service.apiService.NewsAPIService
 import dagger.Module
 import dagger.Provides
@@ -18,7 +19,7 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(): Retrofit =
         Retrofit.Builder()
-            .baseUrl(NewsAPIService.BASE_URL)
+            .baseUrl(BuildConfig.API_BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
 

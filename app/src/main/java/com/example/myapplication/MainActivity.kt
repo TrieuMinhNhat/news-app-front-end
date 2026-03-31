@@ -10,14 +10,15 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.navigation.compose.rememberNavController
 import com.example.myapplication.navigation.AppNavGraph
 import com.example.myapplication.ui.theme.NewsAppTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     // 🔥 SINGLE EVENT STATE
@@ -52,7 +53,6 @@ class MainActivity : ComponentActivity() {
     }
 
     // ✅ App quay lại foreground
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onResume() {
         super.onResume()
         ContextCompat.registerReceiver(

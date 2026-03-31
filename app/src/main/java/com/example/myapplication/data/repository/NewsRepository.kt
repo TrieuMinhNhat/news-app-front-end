@@ -4,8 +4,9 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import com.example.myapplication.models.ArticlePagingSource
 import com.example.myapplication.service.apiService.NewsAPIService
+import javax.inject.Inject
 
-class NewsRepository(
+class NewsRepository @Inject constructor(
     private val api: NewsAPIService
 ) {
     fun pager(keywords: String?, topic: String?) =

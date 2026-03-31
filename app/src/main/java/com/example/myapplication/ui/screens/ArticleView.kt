@@ -20,7 +20,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.myapplication.models.Article
 import coil.compose.AsyncImage
 import com.example.myapplication.viewmodel.NewsViewModel
@@ -36,7 +36,7 @@ import com.example.myapplication.viewmodel.NewsViewModel
 fun ArticleDetailScreen(
     articleId: Int?,
     onBackClicked: () -> Unit,
-    viewModel: NewsViewModel = viewModel()
+    viewModel: NewsViewModel = hiltViewModel()
 ) {
     //demo
     //val article =Article("1", "Global Tech Summit 2025", "The annual Global Tech Summit kicks off, bringing leaders from around the world to discuss the future of AI.", "https://placehold.co/600x400/EEE/333?text=Article+Image", "TechCrunch");

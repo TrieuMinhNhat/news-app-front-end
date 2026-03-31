@@ -6,6 +6,7 @@ import android.os.Build
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.example.myapplication.BuildConfig
 import com.example.myapplication.data.DeviceRequest
 import com.example.myapplication.data.UserPreferences
 import com.example.myapplication.service.apiService.NewsAPIService
@@ -25,7 +26,7 @@ class TokenWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
 
         // Setup Retrofit (tạo mới instance vì Worker chạy tiến trình riêng)
         val apiService = Retrofit.Builder()
-            .baseUrl(NewsAPIService.BASE_URL)
+            .baseUrl(BuildConfig.API_BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(NewsAPIService::class.java)

@@ -73,19 +73,13 @@ interface NewsAPIService {
     // Thêm vào interface NewsAPIService
     @POST("api/register_device/")
     suspend fun registerDevice(@Body body: DeviceRequest): Response<Unit> // hoặc data model trả về
-    companion object {
-        // Use http://10.0.2.2:8000/ if testing on Emulator and standard Django runserver
-        // Use your actual IP if testing on a real device on the same Wifi.
-        const val BASE_URL =  "http://192.168.1.5:8000/"
-        //const val BASE_URL =  "http://127.0.0.1:8000/"
-
-    }
-    //http://172.20.0.1:8000/
-
     //===FB post ===
     @GET("api/fb/posts/")
     suspend fun getFacebookPosts(
-        @Query("page") page: Int
+        @Header("X-DEVICE-TOKEN") token: String,
+        @Query("page") page: Int,
+        @Query("keywords") keywords: String? = null,
+        @Query("sort_keyword") sortKeyword: String? = null
 
     ): FacebookResponse
 }//192.168.1.12

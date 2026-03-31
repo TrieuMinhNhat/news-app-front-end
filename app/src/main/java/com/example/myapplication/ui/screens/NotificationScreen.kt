@@ -91,8 +91,8 @@ fun NotificationSwipeItem(
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
-    var isVisible by remember(notification.id) { mutableStateOf(true) }
-    var pendingDelete by remember(notification.id) { mutableStateOf(false) }
+    var isVisible by remember { mutableStateOf(true) }
+    var pendingDelete by remember { mutableStateOf(false) }
 
     val density = LocalDensity.current
 
@@ -103,7 +103,7 @@ fun NotificationSwipeItem(
         }
     }
 
-    val dismissState = remember(notification.id) {
+    val dismissState = remember {
         SwipeToDismissBoxState(
             initialValue = SwipeToDismissBoxValue.Settled,
             density = density,

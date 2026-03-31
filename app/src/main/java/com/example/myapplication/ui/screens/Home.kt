@@ -1,8 +1,9 @@
 package com.example.myapplication.ui.screens
 
-import DeviceViewModel
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
@@ -11,15 +12,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.example.myapplication.models.Article
+import com.example.myapplication.viewmodel.DeviceViewModel
 import com.example.myapplication.viewmodel.NewsViewModel
 import com.example.myapplication.viewmodel.NotificationViewModel
 import androidx.compose.foundation.pager.HorizontalPager
@@ -29,7 +33,7 @@ import com.example.myapplication.viewmodel.FacebookViewModel
 import kotlinx.coroutines.launch
 import com.example.myapplication.ui.components.ArticleList
 import com.example.myapplication.ui.components.TopicBar
-
+import androidx.compose.runtime.setValue
 /**
  * Màn hình chính hiển thị danh sách tin tức.
  */
@@ -40,23 +44,27 @@ fun HomeScreen(
     onMenuClicked: () -> Unit,
     onDebugClicked: () -> Unit,
     onNotificationIconClicked: () -> Unit,
-    newsViewModel: NewsViewModel = viewModel(),
-    deviceViewModel: DeviceViewModel = viewModel(),
-    facebookViewModel: FacebookViewModel = viewModel(), // Add this
+    newsViewModel: NewsViewModel = hiltViewModel(),
+    deviceViewModel: DeviceViewModel = hiltViewModel(),
+    facebookViewModel: FacebookViewModel = hiltViewModel(),
     notificationViewModel: NotificationViewModel
 ) {
     val articles = newsViewModel.articlePager.collectAsLazyPagingItems()
     val facebookPosts = facebookViewModel.postPager.collectAsLazyPagingItems()
+    val selectedFacebookKeyword by facebookViewModel.selectedKeyword.collectAsState()
 
     val savedTopics by deviceViewModel.savedTopics.collectAsState()
     val savedKeywords by deviceViewModel.savedKeywords.collectAsState()
     val selectedTopic by newsViewModel.selectedTopic.collectAsState()
     val isInterestMode by newsViewModel.isInterestMode.collectAsState()
+    val selectedInterestKeyword by newsViewModel.selectedInterestKeyword.collectAsState()
     val notificationState by notificationViewModel.state.collectAsStateWithLifecycle()
     val searchQuery by newsViewModel.searchQuery.collectAsState()
     val tabs = listOf("Tin tức", "Mạng xã hội")
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
+    var newsRefreshSignal by remember { mutableIntStateOf(0) }
+    var facebookRefreshSignal by remember { mutableIntStateOf(0) }
 
     Scaffold(
         topBar = {
@@ -99,7 +107,20 @@ fun HomeScreen(
                     tabs.forEachIndexed { index, title ->
                         Tab(
                             selected = pagerState.currentPage == index,
-                            onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                            onClick = {
+                                val isRetap = index == pagerState.currentPage
+                                if (isRetap) {
+                                    if (index == 0) {
+                                        newsRefreshSignal++
+                                        articles.refresh()
+                                    } else {
+                                        facebookRefreshSignal++
+                                        facebookPosts.refresh()
+                                    }
+                                } else {
+                                    scope.launch { pagerState.animateScrollToPage(index) }
+                                }
+                            },
                             text = {
                                 Text(
                                     text = title,
@@ -140,15 +161,38 @@ fun HomeScreen(
                             query = searchQuery,
                             onQueryChange = { newsViewModel.onSearchQueryChanged(it) }
                         )
+                        AnimatedVisibility(visible = isInterestMode && savedKeywords.isNotEmpty()) {
+                            LazyRow(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(savedKeywords) { keyword ->
+                                    FilterChip(
+                                        selected = selectedInterestKeyword == keyword,
+                                        onClick = { newsViewModel.onInterestKeywordSelected(keyword) },
+                                        label = { Text(keyword) }
+                                    )
+                                }
+                            }
+                        }
                         ArticleList(
                             articles = articles,
                             onArticleClicked = onArticleClicked,
-                            contentPadding = PaddingValues(16.dp)
+                            contentPadding = PaddingValues(16.dp),
+                            refreshSignal = newsRefreshSignal
                         )
                     }
                 }
                 1 -> { // FACEBOOK PAGE
-                    FacebookFeedList(posts = facebookPosts)
+                    FacebookFeedList(
+                        posts = facebookPosts,
+                        refreshSignal = facebookRefreshSignal,
+                        availableKeywords = savedKeywords,
+                        selectedKeyword = selectedFacebookKeyword,
+                        onKeywordSelected = { facebookViewModel.onKeywordSelected(it) }
+                    )
                 }
             }
         }

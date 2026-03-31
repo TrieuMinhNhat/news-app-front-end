@@ -1,6 +1,5 @@
 package com.example.myapplication.ui.screens
 
-import DeviceViewModel
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -20,18 +19,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.myapplication.data.Topics
 import com.example.myapplication.ui.screens.TopicChipGrid
+import com.example.myapplication.viewmodel.DeviceViewModel
 import com.example.newsapp.ui.topics.KeyWordSubscription
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InterestsScreen(
     onFinishClicked: () -> Unit,
-    deviceViewModel: DeviceViewModel = viewModel()
+    deviceViewModel: DeviceViewModel = hiltViewModel()
 ) {
-    var hasChanges by remember { mutableStateOf(false) }
     // 1. Lắng nghe dữ liệu từ ViewModel (đã lưu trong máy)
     val savedTopics by deviceViewModel.savedTopics.collectAsState()
     val savedKeywords by deviceViewModel.savedKeywords.collectAsState()
@@ -57,13 +56,11 @@ fun InterestsScreen(
             ) {
                 Button(
                     onClick = {
-                        // 3. Khi bấm Finish, Lưu vào ViewModel (Lưu local + Gửi Server)
-                        if(hasChanges){
-                            deviceViewModel.updateInterests(
-                                topics = currentSelectedTopics.toList(),
-                                keywords = currentKeywords.toList()
-                            )
-                        }
+                        // ViewModel tự kiểm tra có thay đổi hay không trước khi sync server
+                        deviceViewModel.updateInterests(
+                            topics = currentSelectedTopics.toList(),
+                            keywords = currentKeywords.toList()
+                        )
                         onFinishClicked()
                     },
                     modifier = Modifier
@@ -95,7 +92,6 @@ fun InterestsScreen(
                         } else {
                             currentSelectedTopics + topicId // Tạo Set mới thêm phần tử này vào
                         }
-                        hasChanges = true
                     }
                 )
             }
@@ -116,12 +112,10 @@ fun InterestsScreen(
                     onAddKeyword = { keyword ->
                         if (keyword.isNotBlank() && !currentKeywords.contains(keyword)) {
                             currentKeywords.add(keyword)
-                            hasChanges = true
                         }
                     },
                     onRemoveKeyword = { keyword ->
                         currentKeywords.remove(keyword)
-                        hasChanges = true;
                     }
                 )
             }

@@ -1,15 +1,14 @@
-import android.app.Application
+package com.example.myapplication.viewmodel
+
 import android.os.Build
 import android.util.Log
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-
 import com.example.myapplication.data.DeviceRequest
 import com.example.myapplication.data.UserPreferences
 import com.example.myapplication.data.repository.DeviceRepository
-import com.example.myapplication.service.apiService.NewsAPIService
-import com.example.myapplication.service.apiService.RetrofitProvider
 import com.google.firebase.messaging.FirebaseMessaging
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,22 +16,14 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import kotlin.getValue
+@HiltViewModel
+class DeviceViewModel @Inject constructor(
+    private val repo: DeviceRepository,
+    private val userPrefs: UserPreferences
+) : ViewModel() {
 
-
-class DeviceViewModel(application: Application) : AndroidViewModel(application) {
-
-
-
-    private val repo = DeviceRepository(
-        RetrofitProvider.apiService
-    )
-    private val userPrefs = UserPreferences(application)
-
-    // StateFlow để UI lắng nghe
     private val _fcmToken = MutableStateFlow<String?>(null)
     val fcmToken: StateFlow<String?> = _fcmToken.asStateFlow()
 
@@ -58,7 +49,6 @@ class DeviceViewModel(application: Application) : AndroidViewModel(application) 
                 _savedKeywords.value = set.toList()
             }
         }
-        // Lắng nghe Token từ UserPreferences
         viewModelScope.launch {
             userPrefs.fcmToken.collectLatest { token ->
                 _fcmToken.value = token
@@ -67,16 +57,6 @@ class DeviceViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun fetchTokenOnce() {
-//        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-//            if (task.isSuccessful) {
-//                val token = task.result
-//                _fcmToken.value = token
-//                viewModelScope.launch {
-//                    userPrefs.saveToken(token) // Lưu vào kho dùng chung
-//                }
-//                Log.d("FCM", "Token fetched and saved to DataStore")
-//            }
-//        }
         FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
             viewModelScope.launch {
                 userPrefs.saveToken(token)
@@ -84,14 +64,20 @@ class DeviceViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    // Hàm gọi từ UI khi user bấm nút "Finish" hoặc thay đổi setting
     fun updateInterests(topics: List<String>, keywords: List<String>) {
-        viewModelScope.launch {
-            // 1. Lưu Local trước (Offline first)
-            userPrefs.saveTopics(topics.toSet())
-            userPrefs.saveKeywords(keywords.toSet())
+        val newTopics = topics.toSet()
+        val newKeywords = keywords.toSet()
+        val currentTopics = savedTopics.value
+        val currentKeywords = savedKeywords.value.toSet()
 
-            // 2. Đồng bộ lên Server
+        if (newTopics == currentTopics && newKeywords == currentKeywords) {
+            Log.d("DeviceViewModel", "No interest changes detected. Skip server sync")
+            return
+        }
+
+        viewModelScope.launch {
+            userPrefs.saveTopics(newTopics)
+            userPrefs.saveKeywords(newKeywords)
             syncDeviceToServer(topics, keywords)
         }
     }

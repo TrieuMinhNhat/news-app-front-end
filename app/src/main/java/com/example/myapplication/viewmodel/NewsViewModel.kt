@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.cachedIn
 import com.example.myapplication.data.repository.NewsRepository
 import com.example.myapplication.models.Article
-import com.example.myapplication.service.apiService.RetrofitProvider
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,34 +14,43 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class NewsViewModel  : ViewModel(){
-
-    private val repo = NewsRepository(
-        RetrofitProvider.apiService
-    )
+@HiltViewModel
+class NewsViewModel @Inject constructor(
+    private val repo: NewsRepository
+) : ViewModel() {
     val searchQuery = MutableStateFlow("")
     val selectedTopic = MutableStateFlow<String?>(null)
     val isInterestMode = MutableStateFlow(false)
     private val userKeywords = MutableStateFlow<List<String>>(emptyList())
+    private val _selectedInterestKeyword = MutableStateFlow<String?>(null)
+    val selectedInterestKeyword: StateFlow<String?> = _selectedInterestKeyword.asStateFlow()
     @OptIn(ExperimentalCoroutinesApi::class)
     val articlePager = combine(
-        searchQuery, selectedTopic, isInterestMode, userKeywords
-    ) { query, topic, interestMode, keywords ->
-        Triple(query, topic, if (interestMode) keywords else emptyList())
-    }.flatMapLatest { (query, topic, keywords) ->
+        searchQuery, selectedTopic, isInterestMode, userKeywords, _selectedInterestKeyword
+    ) { query, topic, interestMode, keywords, selectedInterestKeyword ->
+        QueryState(
+            query = query,
+            topic = topic,
+            interestMode = interestMode,
+            keywords = keywords,
+            selectedInterestKeyword = selectedInterestKeyword
+        )
+    }.flatMapLatest { state ->
 
         // 🔥 FIX: Use 'query' if it exists.
         // Order of priority: Search Query > Interest Keywords > None
         val finalKeywords: String? = when {
-            query.isNotBlank() -> query
-            keywords.isNotEmpty() -> keywords.joinToString(",")
+            state.query.isNotBlank() -> state.query
+            state.interestMode && !state.selectedInterestKeyword.isNullOrBlank() -> state.selectedInterestKeyword
+            state.interestMode && state.keywords.isNotEmpty() -> state.keywords.joinToString(",")
             else -> null
         }
 
         // Keep existing logic: If we have keywords (Search or Interest), ignore specific topic
         // unless your API supports filtering Topic + Keywords together.
-        val finalTopic: String? = if (finalKeywords == null && topic != null) topic else null
+        val finalTopic: String? = if (finalKeywords == null && state.topic != null) state.topic else null
         repo.pager(finalKeywords,finalTopic)
     }.cachedIn(viewModelScope)
 
@@ -51,6 +60,7 @@ class NewsViewModel  : ViewModel(){
         } else {
             selectedTopic.value = topic
             isInterestMode.value = false
+            _selectedInterestKeyword.value = null
         }
         searchQuery.value = ""
     }
@@ -60,17 +70,33 @@ class NewsViewModel  : ViewModel(){
     fun onInterestSelected(keywords: List<String>) {
         if (isInterestMode.value) {
             isInterestMode.value = false
+            _selectedInterestKeyword.value = null
         } else {
             userKeywords.value = keywords
             isInterestMode.value = true
+            _selectedInterestKeyword.value = null
             selectedTopic.value = null
         }
         searchQuery.value = ""
     }
 
+    fun onInterestKeywordSelected(keyword: String?) {
+        val normalizedKeyword = keyword?.trim().takeUnless { it.isNullOrEmpty() }
+        _selectedInterestKeyword.value =
+            if (_selectedInterestKeyword.value == normalizedKeyword) null else normalizedKeyword
+    }
+
     fun onSearchQueryChanged(newQuery: String) {
         searchQuery.value = newQuery
     }
+
+    private data class QueryState(
+        val query: String,
+        val topic: String?,
+        val interestMode: Boolean,
+        val keywords: List<String>,
+        val selectedInterestKeyword: String?
+    )
 
     private val _articleDetail = MutableStateFlow<Article?>(null)
     val articleDetail: StateFlow<Article?> = _articleDetail.asStateFlow()
@@ -81,7 +107,6 @@ class NewsViewModel  : ViewModel(){
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
-    /** Gọi API để lấy chi tiết bài báo */
     fun fetchArticleDetail(articleId: Int?) {
         viewModelScope.launch {
             _isLoadingDetail.value = true

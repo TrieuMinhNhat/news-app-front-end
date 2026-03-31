@@ -3,7 +3,7 @@ package com.example.myapplication.navigation
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -47,7 +47,7 @@ sealed class Screen(val route: String) {
 fun AppNavGraph(
     navController: NavHostController,
     mainEvent: androidx.compose.runtime.MutableState<MainEvent?>,
-    notificationViewModel: NotificationViewModel = viewModel()
+    notificationViewModel: NotificationViewModel = hiltViewModel()
 ) {
     LaunchedEffect(mainEvent.value) {
         when (val event = mainEvent.value) {

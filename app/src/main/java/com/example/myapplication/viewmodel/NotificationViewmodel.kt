@@ -1,15 +1,14 @@
 package com.example.myapplication.viewmodel
 
 
-import android.app.Application
 import android.text.format.DateUtils
 import android.util.Log
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.NotificationUiModel
 import com.example.myapplication.data.UserPreferences
 import com.example.myapplication.data.repository.NotificationRepository
-import com.example.myapplication.service.apiService.RetrofitProvider
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +20,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import javax.inject.Inject
 
 data class NotificationState(
     val items: List<NotificationUiModel> = emptyList(),
@@ -28,18 +28,19 @@ data class NotificationState(
     val isLoading: Boolean = false
 )
 
-class NotificationViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val repo = NotificationRepository(
-        RetrofitProvider.apiService
-    )
-
-    private val userPrefs = UserPreferences(application)
+@HiltViewModel
+class NotificationViewModel @Inject constructor(
+    private val repo: NotificationRepository,
+    private val userPrefs: UserPreferences
+) : ViewModel() {
     private var lastDeleted: NotificationUiModel? = null
 
     private var lastDeletedItem: NotificationUiModel? = null
 
     private var deleteJob: Job? = null // Job để quản lý việc đếm ngược xóa
+    
+    // Track temporarily deleted IDs to prevent them from reappearing on server sync
+    private val pendingDeletedIds = mutableSetOf<Long>()
     // 🔥 SINGLE SOURCE OF TRUTH
     private val _state = MutableStateFlow(NotificationState())
     val state: StateFlow<NotificationState> = _state.asStateFlow()
@@ -82,6 +83,8 @@ class NotificationViewModel(application: Application) : AndroidViewModel(applica
                         articleId = it.article?.toString()
                     )
                 }
+                // Filter out notifications that are pending deletion
+                .filterNot { it.id in pendingDeletedIds }
 
                 _state.value = NotificationState(
                     items = uiModels,
@@ -105,11 +108,15 @@ class NotificationViewModel(application: Application) : AndroidViewModel(applica
             deleteJob?.cancel() // Hủy đếm ngược cũ
             // Buộc phải xóa item cũ ngay vì user đã chuyển sang xóa item mới (tùy chọn logic)
             // Hoặc đơn giản là chấp nhận logic mỗi lần chỉ undo được 1 cái mới nhất
-            lastDeletedItem?.let { commitDelete(it) }
+            lastDeletedItem?.let { 
+                commitDelete(it)
+                pendingDeletedIds.remove(it.id)
+            }
         }
 
-        // 2. Lưu item hiện tại để undo
+        // 2. Lưu item hiện tại để undo và track the pending deletion
         lastDeletedItem = notification
+        pendingDeletedIds.add(notification.id)
 
         // 3. Xóa trên UI trước (Optimistic)
         _state.update {
@@ -122,7 +129,10 @@ class NotificationViewModel(application: Application) : AndroidViewModel(applica
         // 4. Bắt đầu đếm ngược 4 giây (thời gian hiển thị Snackbar)
         deleteJob = viewModelScope.launch {
             delay(4000) // Chờ 4s
-            commitDelete(notification) // Nếu không ai cancel job này, thì xóa thật
+            if (notification.id in pendingDeletedIds) {
+                commitDelete(notification) // Nếu không ai cancel job này, thì xóa thật
+                pendingDeletedIds.remove(notification.id)
+            }
             lastDeletedItem = null // Hết cơ hội undo
         }
     }
@@ -135,6 +145,7 @@ class NotificationViewModel(application: Application) : AndroidViewModel(applica
 
             // Khôi phục lại UI
             lastDeletedItem?.let { item ->
+                pendingDeletedIds.remove(item.id) // Remove from pending deletions
                 _state.update {
                     val newList = (listOf(item) + it.items).sortedByDescending { n -> n.id } // Sắp xếp lại nếu cần
                     it.copy(
@@ -167,12 +178,17 @@ class NotificationViewModel(application: Application) : AndroidViewModel(applica
     fun markAsRead(id: Long) {
         val token = currentToken ?: return
 
-        _state.update {
-            it.copy(
-                items = it.items.map { n ->
+        _state.update { currentState ->
+            val targetWasUnread = currentState.items.any { it.id == id && !it.isRead }
+            currentState.copy(
+                items = currentState.items.map { n ->
                     if (n.id == id && !n.isRead) n.copy(isRead = true) else n
                 },
-                unreadCount = (it.unreadCount - 1).coerceAtLeast(0)
+                unreadCount = if (targetWasUnread) {
+                    (currentState.unreadCount - 1).coerceAtLeast(0)
+                } else {
+                    currentState.unreadCount
+                }
             )
         }
 
