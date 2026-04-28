@@ -35,8 +35,17 @@ fun InterestsScreen(
     val savedTopics by deviceViewModel.savedTopics.collectAsState()
     val savedKeywords by deviceViewModel.savedKeywords.collectAsState()
 
-    var currentSelectedTopics by remember(savedTopics) { mutableStateOf(savedTopics) }
-    val currentKeywords = remember(savedKeywords) { mutableStateListOf(*savedKeywords.toTypedArray()) }
+    var currentSelectedTopics by remember { mutableStateOf(savedTopics) }
+    val currentKeywords = remember { mutableStateListOf(*savedKeywords.toTypedArray()) }
+    var hasUserEdited by remember { mutableStateOf(false) }
+
+    LaunchedEffect(savedTopics, savedKeywords) {
+        if (!hasUserEdited) {
+            currentSelectedTopics = savedTopics
+            currentKeywords.clear()
+            currentKeywords.addAll(savedKeywords)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -87,6 +96,7 @@ fun InterestsScreen(
                     allTopics = Topics.availableTopics,
                     selectedTopicIds = currentSelectedTopics,
                     onTopicClicked = { topicId ->
+                        hasUserEdited = true
                         currentSelectedTopics = if (currentSelectedTopics.contains(topicId)) {
                             currentSelectedTopics - topicId // Tạo Set mới bỏ phần tử này đi
                         } else {
@@ -111,10 +121,12 @@ fun InterestsScreen(
                     keywords = currentKeywords,
                     onAddKeyword = { keyword ->
                         if (keyword.isNotBlank() && !currentKeywords.contains(keyword)) {
+                            hasUserEdited = true
                             currentKeywords.add(keyword)
                         }
                     },
                     onRemoveKeyword = { keyword ->
+                        hasUserEdited = true
                         currentKeywords.remove(keyword)
                     }
                 )
@@ -173,36 +185,10 @@ fun TopicChipGrid(
                     fontWeight = FontWeight.Bold
                 )
 
-//                if (showCount && selectedCount > 0) {
-//                    Spacer(modifier = Modifier.width(8.dp))
-//                    Badge(
-//                        containerColor = MaterialTheme.colorScheme.primary,
-//                        modifier = Modifier
-//                            .size(24.dp)
-//                            .clip(CircleShape)
-//                    ) {
-//                        Text(
-//                            text = selectedCount.toString(),
-//                            style = MaterialTheme.typography.labelSmall,
-//                            color = MaterialTheme.colorScheme.onPrimary,
-//                            modifier = Modifier.padding(horizontal = 6.dp)
-//                        )
-//                    }
-//                }
+
             }
 
-//            if (selectedCount > 0) {
-//                TextButton(
-//                    onClick = { /* Clear all selection */ },
-//                    contentPadding = PaddingValues(horizontal = 8.dp)
-//                ) {
-//                    Text(
-//                        text = "Clear all",
-//                        style = MaterialTheme.typography.labelLarge,
-//                        color = MaterialTheme.colorScheme.primary
-//                    )
-//                }
-//            }
+
         }
 
         // Trending topics row (optional)

@@ -55,12 +55,16 @@ class NewsViewModel @Inject constructor(
     }.cachedIn(viewModelScope)
 
     fun onTopicSelected(topic: String?) {
-        if (selectedTopic.value == topic) {
-            selectedTopic.value = null
+        val normalizedTopic = topic?.trim().takeUnless { it.isNullOrEmpty() || it == "All" }
+
+        // Switching to topic/latest mode must always turn off interest mode.
+        isInterestMode.value = false
+        _selectedInterestKeyword.value = null
+
+        selectedTopic.value = if (selectedTopic.value == normalizedTopic) {
+            null
         } else {
-            selectedTopic.value = topic
-            isInterestMode.value = false
-            _selectedInterestKeyword.value = null
+            normalizedTopic
         }
         searchQuery.value = ""
     }

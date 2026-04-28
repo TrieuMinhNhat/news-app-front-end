@@ -34,6 +34,7 @@ import kotlinx.coroutines.launch
 import com.example.myapplication.ui.components.ArticleList
 import com.example.myapplication.ui.components.TopicBar
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 /**
  * Màn hình chính hiển thị danh sách tin tức.
  */
@@ -44,6 +45,8 @@ fun HomeScreen(
     onMenuClicked: () -> Unit,
     onDebugClicked: () -> Unit,
     onNotificationIconClicked: () -> Unit,
+    initialTabIndex: Int = 0,
+    initialSocialKeyword: String? = null,
     newsViewModel: NewsViewModel = hiltViewModel(),
     deviceViewModel: DeviceViewModel = hiltViewModel(),
     facebookViewModel: FacebookViewModel = hiltViewModel(),
@@ -61,10 +64,17 @@ fun HomeScreen(
     val notificationState by notificationViewModel.state.collectAsStateWithLifecycle()
     val searchQuery by newsViewModel.searchQuery.collectAsState()
     val tabs = listOf("Tin tức", "Mạng xã hội")
-    val pagerState = rememberPagerState(pageCount = { tabs.size })
+    val startTab = initialTabIndex.coerceIn(0, tabs.lastIndex)
+    val pagerState = rememberPagerState(initialPage = startTab, pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
     var newsRefreshSignal by remember { mutableIntStateOf(0) }
     var facebookRefreshSignal by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(initialSocialKeyword) {
+        if (!initialSocialKeyword.isNullOrBlank()) {
+            facebookViewModel.onKeywordSelected(initialSocialKeyword)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -135,32 +145,39 @@ fun HomeScreen(
                 AnimatedVisibility(visible = pagerState.currentPage == 0){
                     TopicBar(
                         savedTopics = savedTopics.toList(),
-                        savedKeywords = savedKeywords,
+                        savedKeywords = savedKeywords.toList(),
                         selectedTopic = selectedTopic,
                         isInterestMode = isInterestMode,
                         onTopicSelected = { newsViewModel.onTopicSelected(it) },
-                        onInterestSelected = { newsViewModel.onInterestSelected(savedKeywords) },
+                        onInterestSelected = { newsViewModel.onInterestSelected(savedKeywords.toList()) },
                         onAddTopicClicked = onMenuClicked
                     )
                 }
 
             }
+        },
+        bottomBar = {
+            ProfessionalBottomBar(
+                pagerState = pagerState,
+                searchQuery = searchQuery,
+                onSearchQueryChanged = newsViewModel::onSearchQueryChanged,
+                onSearch = { newsViewModel.onSearchQueryChanged(searchQuery.trim()) }
+            )
+
         }
+
     ) { innerPadding ->
         HorizontalPager(
             state = pagerState,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = innerPadding.calculateTopPadding()),
+                .padding(innerPadding),
             verticalAlignment = Alignment.Top
         ) { pageIndex ->
             when (pageIndex) {
                 0 -> { // NEWS PAGE
                     Column {
-                        NewsSearchBar(
-                            query = searchQuery,
-                            onQueryChange = { newsViewModel.onSearchQueryChanged(it) }
-                        )
+
                         AnimatedVisibility(visible = isInterestMode && savedKeywords.isNotEmpty()) {
                             LazyRow(
                                 modifier = Modifier
@@ -168,7 +185,7 @@ fun HomeScreen(
                                     .padding(horizontal = 16.dp, vertical = 8.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                items(savedKeywords) { keyword ->
+                                items(savedKeywords.toList()) { keyword ->
                                     FilterChip(
                                         selected = selectedInterestKeyword == keyword,
                                         onClick = { newsViewModel.onInterestKeywordSelected(keyword) },
@@ -189,7 +206,7 @@ fun HomeScreen(
                     FacebookFeedList(
                         posts = facebookPosts,
                         refreshSignal = facebookRefreshSignal,
-                        availableKeywords = savedKeywords,
+                        availableKeywords = savedKeywords.toList(),
                         selectedKeyword = selectedFacebookKeyword,
                         onKeywordSelected = { facebookViewModel.onKeywordSelected(it) }
                     )

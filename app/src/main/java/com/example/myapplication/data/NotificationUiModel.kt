@@ -6,5 +6,7 @@ data class NotificationUiModel(
     val body: String,
     val timestamp: String, // Ví dụ: "10:30" hoặc "2 giờ trước"
     val isRead: Boolean,
-    val articleId: String? // Để navigate khi click vào
+    val articleId: String?, // Để navigate khi click vào
+    val type: String?,
+    val keyword: String?
 )

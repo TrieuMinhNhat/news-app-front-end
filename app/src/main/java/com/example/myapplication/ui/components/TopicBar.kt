@@ -30,7 +30,7 @@ fun TopicBar(
     savedKeywords: List<String>,
     selectedTopic: String?,
     isInterestMode: Boolean,
-    onTopicSelected: (String) -> Unit,
+    onTopicSelected: (String?) -> Unit,
     onInterestSelected: () -> Unit,
     onAddTopicClicked: () -> Unit
 ) {
@@ -75,12 +75,12 @@ fun TopicBar(
             // -- Nút "Mới nhất" (Default) --
             item {
                 FilterChip(
-                    selected = selectedTopic == null && !isInterestMode,
-                    onClick = { onTopicSelected("") },
+                    selected = selectedTopic.isNullOrBlank() && !isInterestMode,
+                    onClick = { onTopicSelected(null) },
                     label = { Text("Mới nhất") },
                     leadingIcon = {
                         // Chỉ hiện icon khi đang chọn tab này
-                        if (selectedTopic == null && !isInterestMode) {
+                        if (selectedTopic.isNullOrBlank() && !isInterestMode) {
                             Icon(Icons.Default.FiberNew, contentDescription = null, Modifier.size(18.dp))
                         }
                     },
@@ -114,4 +114,4 @@ fun TopicBar(
             }
         }
     }
-}
+} 

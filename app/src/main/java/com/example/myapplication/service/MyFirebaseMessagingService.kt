@@ -29,7 +29,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val title = data["title"] ?: message.notification?.title ?: "News App"
         val body = data["body"] ?: message.notification?.body ?: "Tin mới"
         val articleId = data["article_id"]
-        val imageUrl = data["image"] // Server cần gửi kèm field này nếu muốn hiện ảnh
+        val notificationId = data["notification_id"]
+        val notificationType = data["type"]
+        val keyword = data["keyword"]
+        val imageUrl = data["image_url"] ?: data["image"] // Support both keys
 
         val notificationWork = OneTimeWorkRequestBuilder<NotificationDisplayWorker>()
             .setInputData(
@@ -37,6 +40,9 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                     NotificationDisplayWorker.KEY_TITLE to title,
                     NotificationDisplayWorker.KEY_BODY to body,
                     NotificationDisplayWorker.KEY_ARTICLE_ID to articleId,
+                    NotificationDisplayWorker.KEY_NOTIFICATION_ID to notificationId,
+                    NotificationDisplayWorker.KEY_NOTIFICATION_TYPE to notificationType,
+                    NotificationDisplayWorker.KEY_KEYWORD to keyword,
                     NotificationDisplayWorker.KEY_IMAGE_URL to imageUrl
                 )
             )

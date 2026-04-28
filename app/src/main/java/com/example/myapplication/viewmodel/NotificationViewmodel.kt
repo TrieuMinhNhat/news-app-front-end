@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.NotificationUiModel
 import com.example.myapplication.data.UserPreferences
 import com.example.myapplication.data.repository.NotificationRepository
+import com.example.myapplication.helper.TimeFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -17,9 +18,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.Locale
-import java.util.TimeZone
 import javax.inject.Inject
 
 data class NotificationState(
@@ -41,6 +43,8 @@ class NotificationViewModel @Inject constructor(
     
     // Track temporarily deleted IDs to prevent them from reappearing on server sync
     private val pendingDeletedIds = mutableSetOf<Long>()
+    private val pendingReadNotificationIds = mutableSetOf<Long>()
+    private val pendingReadArticleIds = mutableSetOf<String>()
     // 🔥 SINGLE SOURCE OF TRUTH
     private val _state = MutableStateFlow(NotificationState())
     val state: StateFlow<NotificationState> = _state.asStateFlow()
@@ -57,9 +61,20 @@ class NotificationViewModel @Inject constructor(
                 if (!token.isNullOrEmpty()) {
                     currentToken = token
                     syncFromServer()
+                    flushPendingReads()
                 }
             }
         }
+    }
+
+    private fun flushPendingReads() {
+        val notificationIds = pendingReadNotificationIds.toList()
+        pendingReadNotificationIds.clear()
+        notificationIds.forEach { markAsRead(it) }
+
+        val articleIds = pendingReadArticleIds.toList()
+        pendingReadArticleIds.clear()
+        articleIds.forEach { markAsReadByArticleId(it) }
     }
 
     // =========================
@@ -74,13 +89,17 @@ class NotificationViewModel @Inject constructor(
             try {
                 val response = repo.getNotifications(token)
                 val uiModels = response.map {
+                    val type = it.data?.get("type")?.toString()?.trim().takeUnless { v -> v.isNullOrEmpty() }
+                    val keyword = it.data?.get("keyword")?.toString()?.trim().takeUnless { v -> v.isNullOrEmpty() }
                     NotificationUiModel(
                         id = it.id,
                         title = it.title,
                         body = it.body,
-                        timestamp = formatTime(it.createdAt),
+                        timestamp = TimeFormatter.formatRelativeTime(it.createdAt),
                         isRead = it.isRead,
-                        articleId = it.article?.toString()
+                        articleId = it.article?.toString(),
+                        type = type,
+                        keyword = keyword
                     )
                 }
                 // Filter out notifications that are pending deletion
@@ -176,7 +195,25 @@ class NotificationViewModel @Inject constructor(
     // ✅ MARK AS READ (ID)
     // =========================
     fun markAsRead(id: Long) {
-        val token = currentToken ?: return
+        val token = currentToken
+
+        if (token.isNullOrEmpty()) {
+            pendingReadNotificationIds.add(id)
+            _state.update { currentState ->
+                val targetWasUnread = currentState.items.any { it.id == id && !it.isRead }
+                currentState.copy(
+                    items = currentState.items.map { n ->
+                        if (n.id == id && !n.isRead) n.copy(isRead = true) else n
+                    },
+                    unreadCount = if (targetWasUnread) {
+                        (currentState.unreadCount - 1).coerceAtLeast(0)
+                    } else {
+                        currentState.unreadCount
+                    }
+                )
+            }
+            return
+        }
 
         _state.update { currentState ->
             val targetWasUnread = currentState.items.any { it.id == id && !it.isRead }
@@ -201,11 +238,56 @@ class NotificationViewModel @Inject constructor(
         }
     }
 
+    fun markNotificationRead(id: Long) {
+        val token = currentToken
+
+        if (token.isNullOrEmpty()) {
+            pendingReadNotificationIds.add(id)
+            _state.update { currentState ->
+                val targetWasUnread = currentState.items.any { it.id == id && !it.isRead }
+                currentState.copy(
+                    items = currentState.items.map { n ->
+                        if (n.id == id && !n.isRead) n.copy(isRead = true) else n
+                    },
+                    unreadCount = if (targetWasUnread) {
+                        (currentState.unreadCount - 1).coerceAtLeast(0)
+                    } else {
+                        currentState.unreadCount
+                    }
+                )
+            }
+            return
+        }
+
+        markAsRead(id)
+    }
+
     // =========================
     // 🔔 MARK AS READ BY ARTICLE
     // =========================
     fun markAsReadByArticleId(articleId: String) {
-        val token = currentToken ?: return
+        val token = currentToken
+
+        if (token.isNullOrEmpty()) {
+            pendingReadArticleIds.add(articleId)
+            _state.update { currentState ->
+                val updatedItems = currentState.items.map { n ->
+                    if (n.articleId == articleId && !n.isRead) n.copy(isRead = true) else n
+                }
+
+                val newUnreadCount = if (currentState.items.isNotEmpty()) {
+                    updatedItems.count { !it.isRead }
+                } else {
+                    (currentState.unreadCount - 1).coerceAtLeast(0)
+                }
+
+                currentState.copy(
+                    items = updatedItems,
+                    unreadCount = newUnreadCount
+                )
+            }
+            return
+        }
 
         _state.update { currentState ->
             // 1. Cập nhật trạng thái item trong list nếu tìm thấy
@@ -251,6 +333,22 @@ class NotificationViewModel @Inject constructor(
         }
     }
 
+    fun markFirstUnreadByTypeAndKeyword(type: String?, keyword: String?) {
+        val normalizedType = type?.trim().orEmpty()
+        if (normalizedType.isEmpty()) return
+
+        val normalizedKeyword = keyword?.trim()
+        val target = _state.value.items.firstOrNull { item ->
+            !item.isRead &&
+                item.type == normalizedType &&
+                (normalizedKeyword.isNullOrBlank() || item.keyword.equals(normalizedKeyword, ignoreCase = true))
+        }
+
+        if (target != null) {
+            markAsRead(target.id)
+        }
+    }
+
     // =========================
     // ✅ MARK ALL READ
     // =========================
@@ -273,22 +371,4 @@ class NotificationViewModel @Inject constructor(
         }
     }
 
-    // =========================
-    // ⏱ TIME FORMAT
-    // =========================
-    private fun formatTime(iso: String): String {
-        return try {
-            val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'", Locale.getDefault())
-            sdf.timeZone = TimeZone.getTimeZone("UTC")
-            val date = sdf.parse(iso) ?: return "Just now"
-
-            DateUtils.getRelativeTimeSpanString(
-                date.time,
-                System.currentTimeMillis(),
-                DateUtils.MINUTE_IN_MILLIS
-            ).toString()
-        } catch (e: Exception) {
-            "Recent"
-        }
-    }
 }

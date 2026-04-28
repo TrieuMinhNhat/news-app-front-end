@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 @HiltViewModel
@@ -30,8 +31,8 @@ class DeviceViewModel @Inject constructor(
     private val _savedTopics = MutableStateFlow<Set<String>>(emptySet())
     val savedTopics: StateFlow<Set<String>> = _savedTopics.asStateFlow()
 
-    private val _savedKeywords = MutableStateFlow<List<String>>(emptyList())
-    val savedKeywords: StateFlow<List<String>> = _savedKeywords.asStateFlow()
+    private val _savedKeywords = MutableStateFlow<Set<String>>(emptySet())
+    val savedKeywords: StateFlow<Set<String>> = _savedKeywords.asStateFlow()
 
     init {
         loadLocalPreferences()
@@ -46,7 +47,7 @@ class DeviceViewModel @Inject constructor(
         }
         viewModelScope.launch {
             userPrefs.savedKeywords.collectLatest { set ->
-                _savedKeywords.value = set.toList()
+                _savedKeywords.value = set
             }
         }
         viewModelScope.launch {
@@ -68,7 +69,7 @@ class DeviceViewModel @Inject constructor(
         val newTopics = topics.toSet()
         val newKeywords = keywords.toSet()
         val currentTopics = savedTopics.value
-        val currentKeywords = savedKeywords.value.toSet()
+        val currentKeywords = savedKeywords.value
 
         if (newTopics == currentTopics && newKeywords == currentKeywords) {
             Log.d("DeviceViewModel", "No interest changes detected. Skip server sync")
@@ -78,19 +79,17 @@ class DeviceViewModel @Inject constructor(
         viewModelScope.launch {
             userPrefs.saveTopics(newTopics)
             userPrefs.saveKeywords(newKeywords)
-            syncDeviceToServer(topics, keywords)
-        }
-    }
-
-    private fun syncDeviceToServer(topics: List<String>, keywords: List<String>) {
-        viewModelScope.launch {
-            val token = fcmToken.filterNotNull().first()
+            val token = withTimeoutOrNull(5_000) { fcmToken.filterNotNull().first() }
+            if (token == null) {
+                Log.e("DeviceViewModel", "FCM token timeout")
+                return@launch
+            }
 
             val request = DeviceRequest(
                 token = token,
                 device_name = Build.MODEL,
-                keywords = keywords,
-                topics = topics
+                keywords = newKeywords.toList(),
+                topics = newTopics.toList()
             )
 
             try {

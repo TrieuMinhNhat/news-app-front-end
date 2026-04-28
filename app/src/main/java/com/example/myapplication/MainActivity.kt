@@ -34,9 +34,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         // ✅ Cold start (app mở từ notification)
-        intent?.getStringExtra("article_id")?.let {
-            mainEvent.value = MainEvent.NotificationArrived(it)
-        }
+        handleNotificationIntent(intent)
 
         setContent {
             NewsAppTheme {
@@ -73,8 +71,24 @@ class MainActivity : ComponentActivity() {
     // ✅ Warm start / background → foreground
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        intent.getStringExtra("article_id")?.let {
-            mainEvent.value = MainEvent.NotificationArrived(it)
+        handleNotificationIntent(intent)
+    }
+
+    private fun handleNotificationIntent(intent: Intent?) {
+        if (intent == null) return
+
+        val articleId = intent.getStringExtra("article_id")
+        val notificationId = intent.getStringExtra("notification_id")
+        val notificationType = intent.getStringExtra("notification_type")
+        val keyword = intent.getStringExtra("keyword")
+
+        if (articleId != null || notificationType != null || notificationId != null) {
+            mainEvent.value = MainEvent.NotificationArrived(
+                articleId = articleId,
+                notificationType = notificationType,
+                notificationId = notificationId,
+                keyword = keyword
+            )
         }
     }
 

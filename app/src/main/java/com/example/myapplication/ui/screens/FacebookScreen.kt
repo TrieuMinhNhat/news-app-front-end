@@ -50,6 +50,10 @@ import java.util.Locale
 import java.util.TimeZone
 import com.example.myapplication.R
 import androidx.compose.ui.platform.LocalUriHandler
+import com.example.myapplication.helper.TimeFormatter
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FacebookFeedList(
@@ -203,7 +207,7 @@ fun FacebookPostCard(post: FacebookPost) {
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = formatCrawledDate(safeDate),
+                            text = TimeFormatter.formatRelativeTime(safeDate),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.outline
                         )
@@ -350,13 +354,10 @@ private fun FullScreenImageViewer(
 
 private fun formatCrawledDate(raw: String): String {
     return try {
-        val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'", Locale.US)
-        parser.timeZone = TimeZone.getTimeZone("UTC")
-        val date = parser.parse(raw) ?: return raw
-
-        val output = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-        output.format(date)
-    } catch (_: Exception) {
+        val instant = OffsetDateTime.parse(raw)
+        val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        instant.format(formatter)
+    } catch (e: Exception) {
         raw
     }
 }

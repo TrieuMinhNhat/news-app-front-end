@@ -28,6 +28,9 @@ class NotificationDisplayWorker(
         val body = inputData.getString(KEY_BODY)?.trim().takeUnless { it.isNullOrEmpty() }
             ?: "You have a new update"
         val articleId = inputData.getString(KEY_ARTICLE_ID)
+        val notificationId = inputData.getString(KEY_NOTIFICATION_ID)
+        val notificationType = inputData.getString(KEY_NOTIFICATION_TYPE)
+        val keyword = inputData.getString(KEY_KEYWORD)
         val imageUrl = inputData.getString(KEY_IMAGE_URL)
 
         val bitmap = if (!imageUrl.isNullOrBlank()) {
@@ -36,11 +39,19 @@ class NotificationDisplayWorker(
             null
         }
 
-        showNotification(title, body, articleId, bitmap)
+        showNotification(title, body, articleId, notificationId, notificationType, keyword, bitmap)
         return Result.success()
     }
 
-    private fun showNotification(title: String, body: String, articleId: String?, bitmap: Bitmap?) {
+    private fun showNotification(
+        title: String,
+        body: String,
+        articleId: String?,
+        notificationId: String?,
+        notificationType: String?,
+        keyword: String?,
+        bitmap: Bitmap?
+    ) {
         val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channelId = "NEWS_CHANNEL_HEADS_UP"
 
@@ -61,6 +72,9 @@ class NotificationDisplayWorker(
         val intent = Intent(applicationContext, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             if (articleId != null) putExtra("article_id", articleId)
+            if (notificationId != null) putExtra("notification_id", notificationId)
+            if (notificationType != null) putExtra("notification_type", notificationType)
+            if (keyword != null) putExtra("keyword", keyword)
         }
 
         val pendingIntent = PendingIntent.getActivity(
@@ -122,6 +136,9 @@ class NotificationDisplayWorker(
         const val KEY_TITLE = "title"
         const val KEY_BODY = "body"
         const val KEY_ARTICLE_ID = "article_id"
-        const val KEY_IMAGE_URL = "image"
+        const val KEY_NOTIFICATION_ID = "notification_id"
+        const val KEY_NOTIFICATION_TYPE = "notification_type"
+        const val KEY_KEYWORD = "keyword"
+        const val KEY_IMAGE_URL = "image_url"
     }
 }

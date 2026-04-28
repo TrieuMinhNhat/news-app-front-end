@@ -197,7 +197,9 @@ fun PreviewNotificationScreen() {
             body = "Giá vàng hôm nay tăng kỷ lục, người dân đổ xô đi mua...",
             timestamp = "5 phút trước",
             isRead = false,
-            articleId = "123"
+            articleId = "123",
+            type = "new_article",
+            keyword = null
         ),
         NotificationUiModel(
             id = 2,
@@ -205,7 +207,9 @@ fun PreviewNotificationScreen() {
             body = "Thị trường chứng khoán có dấu hiệu hồi phục mạnh mẽ vào phiên chiều.",
             timestamp = "1 giờ trước",
             isRead = true,
-            articleId = "124"
+            articleId = "124",
+            type = "new_article",
+            keyword = null
         ),
         NotificationUiModel(
             id = 3,
@@ -213,7 +217,9 @@ fun PreviewNotificationScreen() {
             body = "OpenAI vừa ra mắt phiên bản mới với khả năng xử lý ngôn ngữ vượt trội.",
             timestamp = "Hôm qua",
             isRead = true,
-            articleId = "125"
+            articleId = "125",
+            type = "new_article",
+            keyword = null
         )
     )
     

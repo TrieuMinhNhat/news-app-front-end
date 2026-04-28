@@ -10,6 +10,7 @@ import com.example.myapplication.viewmodel.NotificationViewModel
 fun NotificationRoute(
     onBack: () -> Unit,
     onNavigateToArticle: (Int) -> Unit,
+    onNavigateToSocial: (String?) -> Unit,
     viewModel: NotificationViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -18,7 +19,14 @@ fun NotificationRoute(
         onBackClick = onBack,
         onNotificationClick = { notification ->
             viewModel.markAsRead(notification.id)
-            notification.articleId?.toIntOrNull()?.let(onNavigateToArticle)
+            when (notification.type) {
+                "facebook_post_update", "threads_keyword_update" -> {
+                    onNavigateToSocial(notification.keyword)
+                }
+                else -> {
+                    notification.articleId?.toIntOrNull()?.let(onNavigateToArticle)
+                }
+            }
         },
         onMarkAllRead = viewModel::markAllAsRead,
         onDeleteNotification = viewModel::delete,

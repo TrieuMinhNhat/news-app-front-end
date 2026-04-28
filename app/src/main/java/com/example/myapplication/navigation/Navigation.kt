@@ -1,5 +1,6 @@
 package com.example.myapplication.navigation
 
+import android.net.Uri
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
@@ -28,7 +29,16 @@ import androidx.compose.runtime.LaunchedEffect // Nhớ import cái này
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object SignUp : Screen("signup")
-    object Home : Screen("home")
+    object Home : Screen("home?tab={tab}&keyword={keyword}") {
+        fun createRoute(tab: Int? = null, keyword: String? = null): String {
+            val safeKeyword = Uri.encode(keyword ?: "")
+            return if (tab == null) {
+                if (safeKeyword.isBlank()) "home" else "home?tab=0&keyword=$safeKeyword"
+            } else {
+                "home?tab=$tab&keyword=$safeKeyword"
+            }
+        }
+    }
     object Topics : Screen("topics")
     object Debug : Screen("debug")
     object Interest : Screen("interest")
@@ -52,10 +62,26 @@ fun AppNavGraph(
     LaunchedEffect(mainEvent.value) {
         when (val event = mainEvent.value) {
             is MainEvent.NotificationArrived -> {
-                event.articleId.toIntOrNull()?.let { articleId ->
-                    navController.navigate(Screen.Detail.createRoute(articleId))
+                when (event.notificationType) {
+                    "facebook_post_update", "threads_keyword_update" -> {
+                        navController.navigate(Screen.Home.createRoute(tab = 1, keyword = event.keyword))
+                        event.notificationId?.toLongOrNull()?.let { id ->
+                            notificationViewModel.markAsRead(id)
+                        } ?: notificationViewModel.markFirstUnreadByTypeAndKeyword(
+                            type = event.notificationType,
+                            keyword = event.keyword
+                        )
+                    }
 
-                    notificationViewModel.markAsReadByArticleId(event.articleId)
+                    else -> {
+                        event.notificationId?.toLongOrNull()?.let { id ->
+                            notificationViewModel.markAsRead(id)
+                        }
+                        event.articleId?.toIntOrNull()?.let { articleId ->
+                            navController.navigate(Screen.Detail.createRoute(articleId))
+                            notificationViewModel.markAsReadByArticleId(articleId.toString())
+                        }
+                    }
                 }
                 mainEvent.value = null
             }
@@ -105,6 +131,9 @@ fun AppNavGraph(
                 onNavigateToArticle = {
                     navController.navigate(Screen.Detail.createRoute(it))
                 },
+                onNavigateToSocial = { keyword ->
+                    navController.navigate(Screen.Home.createRoute(tab = 1, keyword = keyword))
+                },
                 viewModel = notificationViewModel // Truyền viewmodel instance vào
             )
         }
@@ -113,7 +142,7 @@ fun AppNavGraph(
             SignUpScreen(
                 onNavigateBack = { navController.navigateUp() },
                 onSignUpSuccess = {
-                    navController.navigate(Screen.Home.route) {
+                    navController.navigate(Screen.Home.createRoute()) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
                 }
@@ -124,7 +153,7 @@ fun AppNavGraph(
         composable(Screen.Interest.route) {
             InterestsScreen(
                 onFinishClicked = {
-                    navController.navigate(Screen.Home.route) {
+                    navController.navigate(Screen.Home.createRoute()) {
                         popUpTo(Screen.Interest.route) { inclusive = true }
                     }
 
@@ -132,7 +161,23 @@ fun AppNavGraph(
             )
         }
 
-        composable(Screen.Home.route) {
+        composable(
+            route = Screen.Home.route,
+            arguments = listOf(
+                navArgument("tab") {
+                    type = NavType.IntType
+                    defaultValue = 0
+                },
+                navArgument("keyword") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                }
+            )
+        ) { entry ->
+            val initialTabIndex = entry.arguments?.getInt("tab") ?: 0
+            val initialSocialKeyword = entry.arguments?.getString("keyword")
+                ?.trim()
+                ?.takeUnless { it.isEmpty() }
             HomeScreen(
                 onArticleClicked = { article ->
                     navController.navigate(Screen.Detail.createRoute(article.id))
@@ -142,6 +187,8 @@ fun AppNavGraph(
                 onNotificationIconClicked = {
                     navController.navigate(Screen.Notification.route)
                 },
+                initialTabIndex = initialTabIndex,
+                initialSocialKeyword = initialSocialKeyword,
                 notificationViewModel = notificationViewModel // ✅ INSTANCE
             )
         }
