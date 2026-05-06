@@ -52,7 +52,7 @@ fun NotificationItem(
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = if (notification.isRead) FontWeight.Medium else FontWeight.SemiBold
                     ),
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
             },
@@ -61,7 +61,7 @@ fun NotificationItem(
                     Text(
                         text = notification.body,
                         style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 2,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

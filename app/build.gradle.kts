@@ -28,7 +28,7 @@ android {
     productFlavors {
         create("dev") {
             dimension = "env"
-            buildConfigField("String", "API_BASE_URL", "\"http://192.168.1.8:8000/\"")
+            buildConfigField("String", "API_BASE_URL", "\"http://192.168.1.23:8000/\"")
             manifestPlaceholders["deepLinkHost"] = "192.168.1.8"
         }
         create("prod") {

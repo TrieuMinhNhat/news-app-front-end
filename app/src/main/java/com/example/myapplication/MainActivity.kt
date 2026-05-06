@@ -59,6 +59,7 @@ class MainActivity : ComponentActivity() {
             IntentFilter("com.example.myapplication.UPDATE_NOTIFICATIONS"),
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
+        //mainEvent.value = MainEvent.RefreshNotification
     }
 
     override fun onPause() {

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
@@ -92,6 +93,20 @@ fun InterestsScreen(
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             item {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Cá nhân hóa bản tin",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Chọn chủ đề và từ khóa để ưu tiên nội dung phù hợp nhất.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            item {
                 TopicChipGrid(
                     allTopics = Topics.availableTopics,
                     selectedTopicIds = currentSelectedTopics,
@@ -152,10 +167,7 @@ fun TopicChipGrid(
     trendingTopics: Set<String> = emptySet()
 ) {
     var isExpanded by remember { mutableStateOf(false) }
-    var selectedCount by remember { mutableIntStateOf(selectedTopicIds.size) }
-
-    // Update selected count when selection changes
-    selectedCount = selectedTopicIds.size
+    val selectedCount = selectedTopicIds.size
 
     val displayedTopics = if (isExpanded) allTopics else allTopics.take(maxInitialDisplay)
     val hasMoreTopics = allTopics.size > maxInitialDisplay
@@ -184,11 +196,20 @@ fun TopicChipGrid(
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
-
-
             }
-
-
+//            if (showCount) {
+//                Surface(
+//                    color = MaterialTheme.colorScheme.primaryContainer,
+//                    shape = RoundedCornerShape(999.dp)
+//                ) {
+//                    Text(
+//                        text = "Đã chọn $selectedCount",
+//                        style = MaterialTheme.typography.labelLarge,
+//                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+//                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+//                    )
+//                }
+//            }
         }
 
         // Trending topics row (optional)
@@ -308,7 +329,7 @@ fun TopicChipGrid(
                 allTopics = allTopics,
                 onTopicClicked = onTopicClicked,
                 onClearAll = { /* Clear all selection */
-                    selectedTopicIds.forEach { topic ->
+                    selectedTopicIds.toList().forEach { topic ->
                         onTopicClicked(topic)
                     }
                 }

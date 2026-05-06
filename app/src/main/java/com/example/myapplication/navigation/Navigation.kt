@@ -60,36 +60,46 @@ fun AppNavGraph(
     notificationViewModel: NotificationViewModel = hiltViewModel()
 ) {
     LaunchedEffect(mainEvent.value) {
-        when (val event = mainEvent.value) {
-            is MainEvent.NotificationArrived -> {
-                when (event.notificationType) {
-                    "facebook_post_update", "threads_keyword_update" -> {
-                        navController.navigate(Screen.Home.createRoute(tab = 1, keyword = event.keyword))
-                        event.notificationId?.toLongOrNull()?.let { id ->
-                            notificationViewModel.markAsRead(id)
-                        } ?: notificationViewModel.markFirstUnreadByTypeAndKeyword(
-                            type = event.notificationType,
-                            keyword = event.keyword
-                        )
+        val event = mainEvent.value ?: return@LaunchedEffect
+        try {
+            when (event) {
+                is MainEvent.NotificationArrived -> {
+                    val notificationId = event.notificationId?.toLongOrNull()
+                    val articleId = event.articleId?.toIntOrNull()
+
+                    // 1) Mark as read as early as possible (works for cold-start too:
+                    // NotificationViewModel queues pending reads until token/sync is ready).
+                    when {
+                        notificationId != null -> notificationViewModel.markAsRead(notificationId)
+                        articleId != null -> notificationViewModel.markAsReadByArticleId(articleId.toString())
+                        event.notificationType != null ->
+                            notificationViewModel.markFirstUnreadByTypeAndKeyword(event.notificationType, event.keyword)
                     }
 
-                    else -> {
-                        event.notificationId?.toLongOrNull()?.let { id ->
-                            notificationViewModel.markAsRead(id)
+                    when (event.notificationType) {
+                        "facebook_post_update", "threads_keyword_update" -> {
+                            navController.navigate(Screen.Home.createRoute(tab = 1, keyword = event.keyword)) {
+                                launchSingleTop = true
+                            }
                         }
-                        event.articleId?.toIntOrNull()?.let { articleId ->
-                            navController.navigate(Screen.Detail.createRoute(articleId))
-                            notificationViewModel.markAsReadByArticleId(articleId.toString())
+
+                        else -> {
+                            if (articleId != null) {
+                                navController.navigate(Screen.Detail.createRoute(articleId)) {
+                                    launchSingleTop = true
+                                }
+                            }
                         }
                     }
                 }
-                mainEvent.value = null
+
+                is MainEvent.RefreshNotification -> {
+                    notificationViewModel.syncFromServer()
+                }
             }
-            is MainEvent.RefreshNotification -> {
-                notificationViewModel.syncFromServer()
-                mainEvent.value = null
-            }
-            null -> Unit
+        } finally {
+            // Always clear the event so it won't re-trigger on recomposition.
+            mainEvent.value = null
         }
     }
     NavHost(

@@ -45,14 +45,9 @@ import androidx.paging.compose.LazyPagingItems
 import coil.compose.AsyncImage
 import com.example.myapplication.enums.SourceType
 import com.example.myapplication.models.FacebookPost
-import java.text.SimpleDateFormat
-import java.util.Locale
-import java.util.TimeZone
 import com.example.myapplication.R
 import androidx.compose.ui.platform.LocalUriHandler
 import com.example.myapplication.helper.TimeFormatter
-import java.time.OffsetDateTime
-import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,7 +80,11 @@ fun FacebookFeedList(
                     FilterChip(
                         selected = selectedKeyword == null,
                         onClick = { onKeywordSelected(null) },
-                        label = { Text("Tất cả") }
+                        label = { Text("Tất cả") },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     )
                 }
 
@@ -93,7 +92,11 @@ fun FacebookFeedList(
                     FilterChip(
                         selected = selectedKeyword == keyword,
                         onClick = { onKeywordSelected(keyword) },
-                        label = { Text(keyword) }
+                        label = { Text(keyword) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     )
                 }
             }
@@ -148,10 +151,15 @@ fun FacebookPostCard(post: FacebookPost) {
     val safeDate = post.crawledAt ?: ""
     val safeUrl = post.postUrl
     val uriHandler = LocalUriHandler.current
+    val isClickable = !safeUrl.isNullOrEmpty()
 
     Card(
-        modifier = Modifier.fillMaxWidth().then(if(!safeUrl.isNullOrEmpty()) Modifier.clickable { uriHandler.openUri(safeUrl) }
-        else Modifier),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (isClickable) Modifier.clickable { uriHandler.openUri(safeUrl.orEmpty()) }
+                else Modifier
+            ),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
@@ -211,6 +219,14 @@ fun FacebookPostCard(post: FacebookPost) {
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.outline
                         )
+                        if (isClickable) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "• Bài gốc",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
             }
@@ -352,12 +368,3 @@ private fun FullScreenImageViewer(
     }
 }
 
-private fun formatCrawledDate(raw: String): String {
-    return try {
-        val instant = OffsetDateTime.parse(raw)
-        val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-        instant.format(formatter)
-    } catch (e: Exception) {
-        raw
-    }
-}

@@ -50,19 +50,36 @@ fun ArticleDetailScreen(
 
     when {
         isLoading -> {
-            CircularProgressIndicator(modifier = Modifier.fillMaxSize())
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
         }
         errorMessage != null -> {
-            Text("Error: $errorMessage")
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Không thể tải bài viết. Vui lòng thử lại.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         article != null -> {
             Scaffold(
                 topBar = {
 
                     TopAppBar(
-                        title = { Text(
-                            " "
-                        ) },
+                        title = {
+                            Text(
+                                text = "Bài viết",
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
+                            )
+                        },
                         navigationIcon = {
                             IconButton(onClick = onBackClicked) {
                                 Icon(
@@ -72,12 +89,12 @@ fun ArticleDetailScreen(
                             }
                         },
                         actions = {
-                                IconButton(onClick = { /* TODO: share */ }) {
-                                    Icon(Icons.Default.Share, contentDescription = "Share")
-                                }
-                                IconButton(onClick = { /* TODO: toggle bookmark */ }) {
-                                    Icon(Icons.Default.BookmarkBorder, contentDescription = "Bookmark")
-                                }
+                            IconButton(onClick = { /* TODO: share */ }) {
+                                Icon(Icons.Default.Share, contentDescription = "Share")
+                            }
+                            IconButton(onClick = { /* TODO: toggle bookmark */ }) {
+                                Icon(Icons.Default.BookmarkBorder, contentDescription = "Bookmark")
+                            }
 
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
@@ -103,12 +120,29 @@ fun ArticleDetailScreen(
                         ) {
                             // In a real app, you'd use an image loading library like Coil:
                             val imageLink = article!!.imageUrl.firstOrNull() ?: "https://placehold.co/600x400?text=No+Image"
-                             AsyncImage(
-                                 model = imageLink,
-                                 contentDescription = "Article image",
-                                 modifier = Modifier.fillMaxSize(),
-                                 contentScale = ContentScale.Crop
-                             )
+                            AsyncImage(
+                                model = imageLink,
+                                contentDescription = "Article image",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+
+                            if (!article!!.source.isNullOrBlank()) {
+                                Surface(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomStart)
+                                        .padding(12.dp),
+                                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                                    shape = MaterialTheme.shapes.small
+                                ) {
+                                    Text(
+                                        text = article!!.source ?: "",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                    )
+                                }
+                            }
 
                         }
                     }
@@ -122,18 +156,28 @@ fun ArticleDetailScreen(
                         ) {
                             Text(
                                 text = article!!.title,
-                                style = MaterialTheme.typography.headlineLarge,
+                                style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold,
                                 lineHeight = 32.sp
                             )
 
                             Spacer(modifier = Modifier.height(12.dp))
 
-                            Text(
-                                text = "By ${article!!.author} • ${article!!.source ?: "Unknown"}",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Tác giả: ${article!!.author}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                if (!article!!.source.isNullOrBlank()) {
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "• ${article!!.source}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                         }
                     }
 

@@ -64,15 +64,27 @@ fun HomeScreen(
     val notificationState by notificationViewModel.state.collectAsStateWithLifecycle()
     val searchQuery by newsViewModel.searchQuery.collectAsState()
     val tabs = listOf("Tin tức", "Mạng xã hội")
-    val startTab = initialTabIndex.coerceIn(0, tabs.lastIndex)
-    val pagerState = rememberPagerState(initialPage = startTab, pageCount = { tabs.size })
+    val targetTab = initialTabIndex.coerceIn(0, tabs.lastIndex)
+    val pagerState = rememberPagerState(initialPage = targetTab, pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
     var newsRefreshSignal by remember { mutableIntStateOf(0) }
     var facebookRefreshSignal by remember { mutableIntStateOf(0) }
 
+    // If navigation args change while this screen is already alive (app is active),
+    // move the pager to the requested tab.
+    LaunchedEffect(targetTab) {
+        if (pagerState.currentPage != targetTab) {
+            pagerState.animateScrollToPage(targetTab)
+        }
+    }
+
     LaunchedEffect(initialSocialKeyword) {
         if (!initialSocialKeyword.isNullOrBlank()) {
             facebookViewModel.onKeywordSelected(initialSocialKeyword)
+            // Selecting a social keyword should also show the Social tab.
+            if (pagerState.currentPage != 1) {
+                pagerState.animateScrollToPage(1)
+            }
         }
     }
 

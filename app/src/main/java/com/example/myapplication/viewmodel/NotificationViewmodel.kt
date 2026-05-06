@@ -45,6 +45,13 @@ class NotificationViewModel @Inject constructor(
     private val pendingDeletedIds = mutableSetOf<Long>()
     private val pendingReadNotificationIds = mutableSetOf<Long>()
     private val pendingReadArticleIds = mutableSetOf<String>()
+
+    private data class PendingTypeKeyword(
+        val type: String,
+        val keyword: String?
+    )
+
+    private val pendingReadTypeKeywords = mutableSetOf<PendingTypeKeyword>()
     // 🔥 SINGLE SOURCE OF TRUTH
     private val _state = MutableStateFlow(NotificationState())
     val state: StateFlow<NotificationState> = _state.asStateFlow()
@@ -75,6 +82,21 @@ class NotificationViewModel @Inject constructor(
         val articleIds = pendingReadArticleIds.toList()
         pendingReadArticleIds.clear()
         articleIds.forEach { markAsReadByArticleId(it) }
+
+        flushPendingTypeKeywordMarks()
+    }
+
+    private fun flushPendingTypeKeywordMarks() {
+        if (pendingReadTypeKeywords.isEmpty()) return
+
+        // Only attempt after we have items (usually after sync).
+        if (_state.value.items.isEmpty()) return
+
+        val pending = pendingReadTypeKeywords.toList()
+        pendingReadTypeKeywords.clear()
+        pending.forEach { (type, keyword) ->
+            markFirstUnreadByTypeAndKeyword(type, keyword)
+        }
     }
 
     // =========================
@@ -110,6 +132,10 @@ class NotificationViewModel @Inject constructor(
                     unreadCount = uiModels.count { !it.isRead },
                     isLoading = false
                 )
+
+                // If a system-tray click arrived before the list loaded,
+                // retry any queued "mark first unread" requests now.
+                flushPendingTypeKeywordMarks()
 
             } catch (e: Exception) {
                 Log.e("NotifVM", "Sync error: ${e.message}")
@@ -166,7 +192,7 @@ class NotificationViewModel @Inject constructor(
             lastDeletedItem?.let { item ->
                 pendingDeletedIds.remove(item.id) // Remove from pending deletions
                 _state.update {
-                    val newList = (listOf(item) + it.items).sortedByDescending { n -> n.id } // Sắp xếp lại nếu cần
+                    val newList = (it.items + item).sortedByDescending { n -> n.id } // Sắp xếp lại nếu cần
                     it.copy(
                         items = newList,
                         unreadCount = if (!item.isRead) it.unreadCount + 1 else it.unreadCount
@@ -346,6 +372,17 @@ class NotificationViewModel @Inject constructor(
 
         if (target != null) {
             markAsRead(target.id)
+            return
+        }
+
+        // Cold start / not yet synced: queue and retry after sync.
+        if (currentToken.isNullOrEmpty() || _state.value.items.isEmpty()) {
+            pendingReadTypeKeywords.add(
+                PendingTypeKeyword(
+                    type = normalizedType,
+                    keyword = normalizedKeyword?.takeUnless { it.isBlank() }
+                )
+            )
         }
     }
 

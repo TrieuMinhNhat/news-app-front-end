@@ -8,5 +8,6 @@ data class NotificationUiModel(
     val isRead: Boolean,
     val articleId: String?, // Để navigate khi click vào
     val type: String?,
-    val keyword: String?
+    val keyword: String?,
+    val imageUrl: String? = null
 )
