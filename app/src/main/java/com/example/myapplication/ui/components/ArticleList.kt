@@ -31,7 +31,9 @@ fun ArticleList(
     onArticleClicked: (Article) -> Unit,
     contentPadding: PaddingValues,
     refreshSignal: Int = 0,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    headerContent: (@Composable () -> Unit)? = null,
+    skipCount: Int = 0
 ) {
     var isUserRefreshing by remember { mutableStateOf(false) }
     val isRefreshLoading = articles.loadState.refresh is LoadState.Loading
@@ -64,12 +66,23 @@ fun ArticleList(
             contentPadding = contentPadding
         ) {
 
+            if (headerContent != null) {
+                item {
+                    headerContent()
+                }
+            }
+
+            val visibleCount = (articles.itemCount - skipCount).coerceAtLeast(0)
+
             items(
-                count = articles.itemCount,
-                key = { index -> articles[index]?.id ?: index }
+                count = visibleCount,
+                key = { index ->
+                    val actualIndex = index + skipCount
+                    articles[actualIndex]?.id ?: actualIndex
+                }
             ) { index ->
 
-                val article = articles[index]
+                val article = articles[index + skipCount]
 
                 article?.let {
                     ArticleCard(

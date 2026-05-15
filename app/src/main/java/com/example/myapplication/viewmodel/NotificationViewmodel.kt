@@ -113,6 +113,7 @@ class NotificationViewModel @Inject constructor(
                 val uiModels = response.map {
                     val type = it.data?.get("type")?.toString()?.trim().takeUnless { v -> v.isNullOrEmpty() }
                     val keyword = it.data?.get("keyword")?.toString()?.trim().takeUnless { v -> v.isNullOrEmpty() }
+                    val imageUrl = it.data?.get("image_url")?.toString()?.trim().takeUnless { v -> v.isNullOrEmpty() }
                     NotificationUiModel(
                         id = it.id,
                         title = it.title,
@@ -121,7 +122,8 @@ class NotificationViewModel @Inject constructor(
                         isRead = it.isRead,
                         articleId = it.article?.toString(),
                         type = type,
-                        keyword = keyword
+                        keyword = keyword,
+                        imageUrl = imageUrl
                     )
                 }
                 // Filter out notifications that are pending deletion

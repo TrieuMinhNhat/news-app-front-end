@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -51,7 +52,28 @@ fun InterestsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Chào mừng đến với Hot News") },
+                title = {
+                    Text(
+                        "Chào mừng đến với Hot News",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                actions = {
+                    IconButton(
+                        onClick = {
+                            hasUserEdited = false
+                            currentSelectedTopics = savedTopics
+                            currentKeywords.clear()
+                            currentKeywords.addAll(savedKeywords)
+                            onFinishClicked()
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Bo thay doi"
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = MaterialTheme.colorScheme.onSurface
@@ -78,7 +100,11 @@ fun InterestsScreen(
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                         .navigationBarsPadding() // Rất tốt, tránh bị đè bởi thanh điều hướng hệ thống
                         .height(54.dp), // Nên để nút cao hơn 1 xíu (chuẩn là 48dp - 56dp)
-                    shape = MaterialTheme.shapes.large
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 ) {
                     Text("Tiếp tục", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
                 }
@@ -86,11 +112,14 @@ fun InterestsScreen(
         }
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding() + 16.dp,
+                bottom = innerPadding.calculateBottomPadding() + 24.dp,
+                start = 16.dp,
+                end = 16.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(32.dp)
         ) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -117,37 +146,40 @@ fun InterestsScreen(
                         } else {
                             currentSelectedTopics + topicId // Tạo Set mới thêm phần tử này vào
                         }
-                    }
-                )
-            }
-            item {
-                Text(
-                    text = "Theo dõi từ khóa",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Nhận thông báo khi có bài viết chứa từ khóa này.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                KeyWordSubscription(
-                    keywords = currentKeywords,
-                    onAddKeyword = { keyword ->
-                        if (keyword.isNotBlank() && !currentKeywords.contains(keyword)) {
-                            hasUserEdited = true
-                            currentKeywords.add(keyword)
-                        }
                     },
-                    onRemoveKeyword = { keyword ->
+                    onClearAll = {
                         hasUserEdited = true
-                        currentKeywords.remove(keyword)
+                        currentSelectedTopics = emptySet()
                     }
                 )
             }
             item {
-                Spacer(modifier = Modifier.height(72.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Theo dõi từ khóa",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Nhận thông báo khi có bài viết chứa từ khóa này.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    KeyWordSubscription(
+                        keywords = currentKeywords,
+                        onAddKeyword = { keyword ->
+                            if (keyword.isNotBlank() && !currentKeywords.contains(keyword)) {
+                                hasUserEdited = true
+                                currentKeywords.add(keyword)
+                            }
+                        },
+                        onRemoveKeyword = { keyword ->
+                            hasUserEdited = true
+                            currentKeywords.remove(keyword)
+                        }
+                    )
+                }
             }
         }
     }
@@ -159,10 +191,10 @@ fun TopicChipGrid(
     allTopics: List<String>,
     selectedTopicIds: Set<String>,
     onTopicClicked: (String) -> Unit,
+    onClearAll: () -> Unit,
     modifier: Modifier = Modifier,
     title: String = "Chủ đề quan tâm",
     maxInitialDisplay: Int = 15,
-    showCount: Boolean = true,
     showTrending: Boolean = false,
     trendingTopics: Set<String> = emptySet()
 ) {
@@ -190,26 +222,25 @@ fun TopicChipGrid(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-//            if (showCount) {
-//                Surface(
-//                    color = MaterialTheme.colorScheme.primaryContainer,
-//                    shape = RoundedCornerShape(999.dp)
-//                ) {
-//                    Text(
-//                        text = "Đã chọn $selectedCount",
-//                        style = MaterialTheme.typography.labelLarge,
-//                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-//                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-//                    )
-//                }
-//            }
+            Text(
+                text = if (selectedCount > 0) "$title ($selectedCount)" else title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+
+            // if (selectedCount > 0) {
+            //     TextButton(
+            //         onClick = onClearAll,
+            //         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+            //         modifier = Modifier.height(32.dp)
+            //     ) {
+            //         Text(
+            //             text = "Xóa tất cả",
+            //             style = MaterialTheme.typography.labelMedium,
+            //             color = MaterialTheme.colorScheme.primary
+            //         )
+            //     }
+            // }
         }
 
         // Trending topics row (optional)
@@ -222,101 +253,89 @@ fun TopicChipGrid(
         }
 
         // Main topic chips
-        OutlinedCard(
+        FlowRow(
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                // Topics Flow
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    displayedTopics.forEach { topic ->
-                        val isSelected = selectedTopicIds.contains(topic)
-                        val isTrending = trendingTopics.contains(topic)
+            displayedTopics.forEach { topic ->
+                val isSelected = selectedTopicIds.contains(topic)
+                val isTrending = trendingTopics.contains(topic)
 
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { onTopicClicked(topic) },
-                            label = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Text(
-                                        text = topic,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    if (isTrending) {
-                                        Icon(
-                                            imageVector = Icons.Default.TrendingUp,
-                                            contentDescription = "Trending",
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                }
-                            },
-                            leadingIcon = if (isSelected) {
-                                {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = "Đã chọn",
-                                        modifier = Modifier.size(FilterChipDefaults.IconSize)
-                                    )
-                                }
-                            } else null,
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            ),
-                            border = if (isSelected) null else FilterChipDefaults.filterChipBorder(
-                                borderColor = MaterialTheme.colorScheme.outlineVariant,
-                                selected = false,
-                                enabled = true
-                            )
-                        )
-                    }
-                }
-
-                // Show more/less button
-                if (hasMoreTopics) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        TextButton(
-                            onClick = { isExpanded = !isExpanded },
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                FilterChip(
+                    selected = isSelected,
+                    onClick = { onTopicClicked(topic) },
+                    label = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = if (isExpanded) {
-                                        "Thu nhỏ"
-                                    } else {
-                                        "Xem thêm ${remainingCount} chủ đề khác"
-                                    },
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+                            Text(
+                                text = topic,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                            if (isTrending) {
                                 Icon(
-                                    imageVector = if (isExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-                                    contentDescription = if (isExpanded) "Show less" else "Show more",
-                                    modifier = Modifier.size(18.dp),
-                                    tint = MaterialTheme.colorScheme.primary
+                                    imageVector = Icons.Default.TrendingUp,
+                                    contentDescription = "Trending",
+                                    modifier = Modifier.size(16.dp)
                                 )
                             }
                         }
+                    },
+                    leadingIcon = if (isSelected) {
+                        {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Đã chọn",
+                                modifier = Modifier.size(FilterChipDefaults.IconSize)
+                            )
+                        }
+                    } else null,
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    border = if (isSelected) null else FilterChipDefaults.filterChipBorder(
+                        borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                        selected = false,
+                        enabled = true
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                )
+            }
+        }
+
+        // Show more/less button
+        if (hasMoreTopics) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                TextButton(
+                    onClick = { isExpanded = !isExpanded },
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = if (isExpanded) "Thu gọn" else "Xem thêm $remainingCount chủ đề",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Icon(
+                            imageVector = if (isExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                            contentDescription = if (isExpanded) "Show less" else "Show more",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             }
@@ -421,7 +440,7 @@ fun SelectedTopicsSummary(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Đã chọn (${selectedTopics.size})",
+                text = "Đã chọn", //"Đã chọn (${selectedTopics.size})",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

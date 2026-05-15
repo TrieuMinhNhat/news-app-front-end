@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,14 +17,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +45,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun NotificationScreen(
     notifications: List<NotificationUiModel>,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     onBackClick: () -> Unit,
     onNotificationClick: (NotificationUiModel) -> Unit,
     onMarkAllRead: () -> Unit,
@@ -51,6 +57,20 @@ fun NotificationScreen(
     val scope = rememberCoroutineScope()
     val hasUnread = remember(notifications) { notifications.any { !it.isRead } }
     val unreadCount = remember(notifications) { notifications.count { !it.isRead } }
+    val listState = rememberLazyListState()
+    val displayedNotifications = remember(notifications) {
+        notifications
+            .withIndex()
+            .sortedWith { a, b ->
+                when {
+                    a.value.isRead && !b.value.isRead -> 1
+                    !a.value.isRead && b.value.isRead -> -1
+                    !a.value.isRead && !b.value.isRead -> b.value.id.compareTo(a.value.id)
+                    else -> a.index.compareTo(b.index)
+                }
+            }
+            .map { it.value }
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -91,74 +111,83 @@ fun NotificationScreen(
             )
         }
     ) { innerPadding ->
-        if (notifications.isEmpty()) {
-            NotificationEmptyState(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            )
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding() + 4.dp,
-                    bottom = innerPadding.calculateBottomPadding() + 16.dp,
-                    start = 8.dp,
-                    end = 8.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Tất cả (${notifications.size})",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        if (unreadCount > 0) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                shape = MaterialTheme.shapes.small
-                            ) {
-                                Text(
-                                    text = "Chưa đọc $unreadCount",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-                items(
-                    items = notifications,
-                    key = { it.id }
-                ) { item ->
-                    NotificationSwipeItem(
-                        notification = item,
-                        onClick = { onNotificationClick(item) },
-                        onDelete = {
-                            onDeleteNotification(item)
-                            scope.launch {
-                                snackbarHostState.currentSnackbarData?.dismiss()
-
-                                val result = snackbarHostState.showSnackbar(
-                                    message = "Đã xóa thông báo",
-                                    actionLabel = "Hoàn tác",
-                                    duration = SnackbarDuration.Short
-                                )
-                                if (result == SnackbarResult.ActionPerformed) {
-                                    onUndoDelete()
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                onRefresh()
+                scope.launch { listState.animateScrollToItem(0) }
+            }
+        ) {
+            if (displayedNotifications.isEmpty()) {
+                NotificationEmptyState(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                )
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        top = innerPadding.calculateTopPadding(),
+                        bottom = innerPadding.calculateBottomPadding() + 16.dp
+                    )
+                ) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Tất cả (${displayedNotifications.size})",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            if (unreadCount > 0) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    shape = CircleShape,
+                                    modifier = Modifier.clickable { scope.launch { listState.animateScrollToItem(0) } }
+                                ) {
+                                    Text(
+                                        text = "Chưa đọc $unreadCount",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                    )
                                 }
                             }
                         }
-                    )
+                    }
+                    items(
+                        items = displayedNotifications,
+                        key = { it.id }
+                    ) { item ->
+                        NotificationSwipeItem(
+                            notification = item,
+                            onClick = { onNotificationClick(item) },
+                            onDelete = {
+                                onDeleteNotification(item)
+                                scope.launch {
+                                    snackbarHostState.currentSnackbarData?.dismiss()
+
+                                    val result = snackbarHostState.showSnackbar(
+                                        message = "Đã xóa thông báo",
+                                        actionLabel = "Hoàn tác",
+                                        duration = SnackbarDuration.Short
+                                    )
+                                    if (result == SnackbarResult.ActionPerformed) {
+                                        onUndoDelete()
+                                    }
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -235,7 +264,6 @@ private fun SwipeDismissBackground(state: SwipeToDismissBoxState) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 12.dp, vertical = 4.dp)
             .background(backgroundColor, shape = MaterialTheme.shapes.medium),
         contentAlignment = Alignment.CenterEnd
     ) {
@@ -320,4 +348,14 @@ fun PreviewNotificationScreen() {
         )
     )
 
+    NotificationScreen(
+        notifications = dummyData,
+        isRefreshing = false,
+        onRefresh = {},
+        onBackClick = {},
+        onNotificationClick = {},
+        onMarkAllRead = {},
+        onDeleteNotification = {},
+        onUndoDelete = {}
+    )
 }

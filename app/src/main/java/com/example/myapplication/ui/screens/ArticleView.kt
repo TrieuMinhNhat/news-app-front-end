@@ -1,15 +1,19 @@
 package com.example.myapplication.ui.screens
 
 import androidx.compose.foundation.background
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -43,6 +47,7 @@ fun ArticleDetailScreen(
     val article by viewModel.articleDetail.collectAsState()
     val isLoading by viewModel.isLoadingDetail.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(articleId) {
         viewModel.fetchArticleDetail(articleId)
@@ -91,6 +96,17 @@ fun ArticleDetailScreen(
                         actions = {
                             IconButton(onClick = { /* TODO: share */ }) {
                                 Icon(Icons.Default.Share, contentDescription = "Share")
+                            }
+                            IconButton(
+                                onClick = {
+                                    val url = article?.link?.trim().orEmpty()
+                                    if (url.isNotEmpty()) {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                        context.startActivity(intent)
+                                    }
+                                }
+                            ) {
+                                Icon(Icons.Default.OpenInNew, contentDescription = "Mo bai viet")
                             }
                             IconButton(onClick = { /* TODO: toggle bookmark */ }) {
                                 Icon(Icons.Default.BookmarkBorder, contentDescription = "Bookmark")

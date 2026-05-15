@@ -104,7 +104,7 @@ fun AppNavGraph(
     }
     NavHost(
         navController = navController,
-        startDestination = Screen.Interest.route,
+        startDestination = Screen.Home.route,
         enterTransition = {
             slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(300))
         },

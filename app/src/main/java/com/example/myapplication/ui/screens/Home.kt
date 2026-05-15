@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
@@ -32,9 +33,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import com.example.myapplication.viewmodel.FacebookViewModel
 import kotlinx.coroutines.launch
 import com.example.myapplication.ui.components.ArticleList
+import com.example.myapplication.ui.components.TopHeadlinesCarousel
 import com.example.myapplication.ui.components.TopicBar
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.unit.sp
+import com.example.myapplication.BuildConfig
 /**
  * Màn hình chính hiển thị danh sách tin tức.
  */
@@ -62,6 +66,7 @@ fun HomeScreen(
     val isInterestMode by newsViewModel.isInterestMode.collectAsState()
     val selectedInterestKeyword by newsViewModel.selectedInterestKeyword.collectAsState()
     val notificationState by notificationViewModel.state.collectAsStateWithLifecycle()
+    val unreadCount = notificationState.unreadCount
     val searchQuery by newsViewModel.searchQuery.collectAsState()
     val tabs = listOf("Tin tức", "Mạng xã hội")
     val targetTab = initialTabIndex.coerceIn(0, tabs.lastIndex)
@@ -69,6 +74,8 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     var newsRefreshSignal by remember { mutableIntStateOf(0) }
     var facebookRefreshSignal by remember { mutableIntStateOf(0) }
+    val headlineArticles = articles.itemSnapshotList.items.take(5)
+    val headlineCount = headlineArticles.size
 
     // If navigation args change while this screen is already alive (app is active),
     // move the pager to the requested tab.
@@ -104,12 +111,34 @@ fun HomeScreen(
                         IconButton(onClick = onNotificationIconClicked) {
                             BadgedBox(
                                 badge = {
-                                    if (notificationState.unreadCount > 0) {
-                                        Badge { Text(notificationState.unreadCount.toString()) }
+                                    val unread = notificationState.unreadCount
+
+                                    if (unread > 0) {
+                                        Badge(
+                                            modifier = Modifier
+                                                .offset(x = (-4).dp, y = 4.dp)
+                                                .height(20.dp)
+                                                .defaultMinSize(minWidth = 20.dp)
+                                        ) {
+                                            Text(
+                                                text = if (unread > 99) "99+" else unread.toString(),
+                                                fontSize = 11.sp,
+                                                maxLines = 1,
+                                                lineHeight = 11.sp
+                                            )
+                                        }
                                     }
                                 }
                             ) {
-                                Icon(Icons.Default.Notifications, contentDescription = "Thông báo")
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = "Thông báo"
+                                )
+                            }
+                        }
+                        if (BuildConfig.DEBUG) {
+                            IconButton(onClick = onDebugClicked) {
+                                Icon(Icons.Default.BugReport, contentDescription = "Debug")
                             }
                         }
                     },
@@ -210,7 +239,18 @@ fun HomeScreen(
                             articles = articles,
                             onArticleClicked = onArticleClicked,
                             contentPadding = PaddingValues(16.dp),
-                            refreshSignal = newsRefreshSignal
+                            refreshSignal = newsRefreshSignal,
+                            headerContent = if (headlineArticles.isNotEmpty()) {
+                                {
+                                    TopHeadlinesCarousel(
+                                        headlines = headlineArticles,
+                                        onArticleClick = onArticleClicked
+                                    )
+                                }
+                            } else {
+                                null
+                            },
+                            skipCount = headlineCount
                         )
                     }
                 }

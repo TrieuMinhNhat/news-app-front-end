@@ -16,6 +16,8 @@ fun NotificationRoute(
     val state by viewModel.state.collectAsStateWithLifecycle()
     NotificationScreen(
         notifications = state.items,
+        isRefreshing = state.isLoading,
+        onRefresh = viewModel::syncFromServer,
         onBackClick = onBack,
         onNotificationClick = { notification ->
             viewModel.markAsRead(notification.id)
