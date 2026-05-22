@@ -65,7 +65,11 @@ class DeviceViewModel @Inject constructor(
         }
     }
 
-    fun updateInterests(topics: List<String>, keywords: List<String>) {
+    fun updateInterests(
+        topics: List<String>,
+        keywords: List<String>,
+        onComplete: (() -> Unit)? = null
+    ) {
         val newTopics = topics.toSet()
         val newKeywords = keywords.toSet()
         val currentTopics = savedTopics.value
@@ -73,12 +77,14 @@ class DeviceViewModel @Inject constructor(
 
         if (newTopics == currentTopics && newKeywords == currentKeywords) {
             Log.d("DeviceViewModel", "No interest changes detected. Skip server sync")
+            onComplete?.invoke()
             return
         }
 
         viewModelScope.launch {
             userPrefs.saveTopics(newTopics)
             userPrefs.saveKeywords(newKeywords)
+            onComplete?.invoke()
             val token = withTimeoutOrNull(5_000) { fcmToken.filterNotNull().first() }
             if (token == null) {
                 Log.e("DeviceViewModel", "FCM token timeout")

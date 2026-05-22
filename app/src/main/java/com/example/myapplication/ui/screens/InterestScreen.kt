@@ -8,6 +8,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
@@ -49,23 +51,47 @@ fun InterestsScreen(
         }
     }
 
+    BackHandler {
+        if (hasUserEdited) {
+            deviceViewModel.updateInterests(
+                topics = currentSelectedTopics.toList(),
+                keywords = currentKeywords.toList(),
+                onComplete = onFinishClicked
+            )
+        } else {
+            onFinishClicked()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        "Chào mừng đến với Hot News",
-                        fontWeight = FontWeight.Bold
-                    )
+                    Column {
+                        Text(
+                            text = "Cá nhân hóa",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Tùy chỉnh bản tin của bạn",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 },
                 actions = {
                     IconButton(
                         onClick = {
-                            hasUserEdited = false
-                            currentSelectedTopics = savedTopics
-                            currentKeywords.clear()
-                            currentKeywords.addAll(savedKeywords)
-                            onFinishClicked()
+                            if (hasUserEdited) {
+                                deviceViewModel.updateInterests(
+                                    topics = currentSelectedTopics.toList(),
+                                    keywords = currentKeywords.toList(),
+                                    onComplete = onFinishClicked
+                                )
+                            } else {
+                                onFinishClicked()
+                            }
                         }
                     ) {
                         Icon(
@@ -91,9 +117,9 @@ fun InterestsScreen(
                         // ViewModel tự kiểm tra có thay đổi hay không trước khi sync server
                         deviceViewModel.updateInterests(
                             topics = currentSelectedTopics.toList(),
-                            keywords = currentKeywords.toList()
+                            keywords = currentKeywords.toList(),
+                            onComplete = onFinishClicked
                         )
-                        onFinishClicked()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -227,20 +253,6 @@ fun TopicChipGrid(
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
-
-            // if (selectedCount > 0) {
-            //     TextButton(
-            //         onClick = onClearAll,
-            //         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-            //         modifier = Modifier.height(32.dp)
-            //     ) {
-            //         Text(
-            //             text = "Xóa tất cả",
-            //             style = MaterialTheme.typography.labelMedium,
-            //             color = MaterialTheme.colorScheme.primary
-            //         )
-            //     }
-            // }
         }
 
         // Trending topics row (optional)

@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
+import android.graphics.Color as AndroidColor
 
 private val LightColorScheme = lightColorScheme(
     primary = PrimaryLight,
@@ -61,8 +62,22 @@ fun NewsAppTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+
+            // Cho phép app vẽ tràn ra phía sau status bar/navigation bar
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+
+            // Làm status bar trong suốt
+            window.statusBarColor = AndroidColor.TRANSPARENT
+
+            // Làm navigation bar trong suốt nếu muốn tràn cả dưới
+            window.navigationBarColor = AndroidColor.TRANSPARENT
+
+            val insetsController = WindowCompat.getInsetsController(window, view)
+
+            // Light theme thì icon status bar nên màu tối
+            // Dark theme thì icon status bar nên màu sáng
+            insetsController.isAppearanceLightStatusBars = !darkTheme
+            insetsController.isAppearanceLightNavigationBars = !darkTheme
         }
     }
 

@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Create
@@ -36,44 +36,72 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.BuildConfig
 import com.example.myapplication.data.UserPreferences
 import kotlinx.coroutines.launch
 
-/**
- * A screen that fetches and displays the current FCM token for debugging.
- */
+private fun normalizeApiInput(input: String): String? {
+    val cleaned = input
+        .trim()
+        .removePrefix("http://")
+        .removePrefix("https://")
+        .trimEnd('/')
+
+    if (cleaned.isBlank()) return null
+
+    val ipPortRegex = Regex(
+        pattern = """^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d):([1-9]\d{0,4})$"""
+    )
+
+    if (!ipPortRegex.matches(cleaned)) return null
+
+    val port = cleaned.substringAfterLast(":").toIntOrNull() ?: return null
+    if (port !in 1..65535) return null
+
+    return "http://$cleaned/"
+}
+
+private fun extractHostPort(url: String): String {
+    return url
+        .trim()
+        .removePrefix("http://")
+        .removePrefix("https://")
+        .trimEnd('/')
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DebugScreen(
+fun SettingsScreen(
     onBackClicked: () -> Unit
 ) {
-    var token by remember { mutableStateOf("Loading token...") }
     val context = LocalContext.current
     val userPreferences = remember { UserPreferences(context) }
     val currentBaseUrl by userPreferences.apiBaseUrl.collectAsState(initial = BuildConfig.API_BASE_URL)
+    var token by remember { mutableStateOf("Loading token...") }
     var baseUrlInput by rememberSaveable { mutableStateOf("") }
     val scope = rememberCoroutineScope()
-    // ADD THIS BLOCK:
+    var lastRenderedBaseUrl by remember { mutableStateOf("") }
     LaunchedEffect(Unit) {
         com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                token = task.result
-            } else {
-                token = "Error: ${task.exception?.message}"
-            }
+            token = if (task.isSuccessful) task.result else "Error: ${task.exception?.message}"
         }
     }
+
     LaunchedEffect(currentBaseUrl) {
-        if (baseUrlInput.isBlank()) {
-            baseUrlInput = currentBaseUrl
+        val currentHostPort = extractHostPort(currentBaseUrl)
+        val lastHostPort = extractHostPort(lastRenderedBaseUrl)
+        if (baseUrlInput.isBlank() || baseUrlInput == lastHostPort) {
+            baseUrlInput = currentHostPort
         }
+        lastRenderedBaseUrl = currentBaseUrl
     }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Debug Info") },
+                title = { Text("Cài đặt") },
                 navigationIcon = {
                     IconButton(onClick = onBackClicked) {
                         Icon(
@@ -97,7 +125,6 @@ fun DebugScreen(
                 style = MaterialTheme.typography.titleMedium
             )
 
-            // Display token in a read-only text field to allow selection
             OutlinedTextField(
                 value = token,
                 onValueChange = {},
@@ -105,7 +132,6 @@ fun DebugScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Button to copy the token to the clipboard
             Button(
                 onClick = {
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -116,14 +142,14 @@ fun DebugScreen(
                 modifier = Modifier.align(Alignment.End)
             ) {
                 Icon(Icons.Default.Create, contentDescription = "Copy")
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.padding(start = 8.dp))
                 Text("Copy Token")
             }
 
-            Spacer(modifier = Modifier.padding(top = 8.dp))
+            Spacer(modifier = Modifier.padding(top = 4.dp))
 
             Text(
-                "API Base URL",
+                "API Server",
                 style = MaterialTheme.typography.titleMedium
             )
 
@@ -131,12 +157,21 @@ fun DebugScreen(
                 value = baseUrlInput,
                 onValueChange = { baseUrlInput = it },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                label = { Text("IP address and port") },
+                placeholder = { Text("Vi du: 192.168.1.10:8000") },
+//                supportingText = {
+//                    Text("Không cần nhập http:// hoặc / ở cuối.")
+//                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Uri
+                )
             )
 
             Text(
-                "Current: $currentBaseUrl",
-                style = MaterialTheme.typography.bodySmall
+                text = "API hiện tại: $currentBaseUrl",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
             )
 
             Row(
@@ -145,30 +180,42 @@ fun DebugScreen(
             ) {
                 Button(
                     onClick = {
-                        val rawValue = baseUrlInput.trim()
-                        if (rawValue.isBlank()) {
-                            Toast.makeText(context, "Base URL cannot be empty", Toast.LENGTH_SHORT).show()
+                        val normalized = normalizeApiInput(baseUrlInput)
+
+                        if (normalized == null) {
+                            Toast.makeText(
+                                context,
+                                "Ví dụ 192.168.1.10:8000",
+                                Toast.LENGTH_SHORT
+                            ).show()
                             return@Button
                         }
-                        if (!rawValue.startsWith("http://") && !rawValue.startsWith("https://")) {
-                            Toast.makeText(context, "Base URL must start with http:// or https://", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-                        val normalized = if (rawValue.endsWith("/")) rawValue else "$rawValue/"
+
                         scope.launch {
                             userPreferences.saveApiBaseUrl(normalized)
-                            Toast.makeText(context, "API Base URL updated", Toast.LENGTH_SHORT).show()
+                            baseUrlInput = extractHostPort(normalized)
+                            Toast.makeText(
+                                context,
+                                "API URL updated: $normalized",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     }
                 ) {
                     Text("Apply")
                 }
+
                 Button(
                     onClick = {
-                        baseUrlInput = BuildConfig.API_BASE_URL
+                        baseUrlInput = extractHostPort(BuildConfig.API_BASE_URL)
+
                         scope.launch {
                             userPreferences.saveApiBaseUrl(BuildConfig.API_BASE_URL)
-                            Toast.makeText(context, "API Base URL reset", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                context,
+                                "API URL reset to build config",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     }
                 ) {

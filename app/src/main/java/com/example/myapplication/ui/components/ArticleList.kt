@@ -31,6 +31,7 @@ fun ArticleList(
     onArticleClicked: (Article) -> Unit,
     contentPadding: PaddingValues,
     refreshSignal: Int = 0,
+    onRefresh: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     headerContent: (@Composable () -> Unit)? = null,
     skipCount: Int = 0
@@ -55,6 +56,7 @@ fun ArticleList(
         isRefreshing = isUserRefreshing && isRefreshLoading,
         onRefresh = {
             isUserRefreshing = true
+            onRefresh?.invoke()
             articles.refresh()
         }
     ) {

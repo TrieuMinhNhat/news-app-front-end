@@ -16,4 +16,7 @@ class NewsRepository @Inject constructor(
 
     suspend fun getArticleDetail(id: Int?) =
         api.getArticleDetail(id)
+
+    suspend fun getHeadlines(deviceToken: String) =
+        api.getHeadlines(deviceToken)
 }

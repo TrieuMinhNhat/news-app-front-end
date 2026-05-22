@@ -37,6 +37,11 @@ interface NewsAPIService {
     @GET("api/articles/{id}/")
     suspend fun getArticleDetail(@Path("id") id: Int?): Article
 
+    @GET("api/articles/headlines/")
+    suspend fun getHeadlines(
+        @Header("X-DEVICE-TOKEN") deviceToken: String
+    ): DjangoPage
+
     // --- NEW NOTIFICATION ENDPOINTS ---
 
     @GET("api/notifications/")

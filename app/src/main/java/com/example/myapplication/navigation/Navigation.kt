@@ -14,9 +14,9 @@ import androidx.navigation.navDeepLink
 import com.example.myapplication.ui.auth.LoginScreen
 import com.example.myapplication.ui.auth.SignUpScreen
 import com.example.myapplication.ui.screens.ArticleDetailScreen
-import com.example.myapplication.ui.screens.HomeScreen
-import com.example.myapplication.ui.screens.DebugScreen
+import com.example.myapplication.ui.screens.home.HomeScreen
 import com.example.myapplication.ui.screens.InterestsScreen
+import com.example.myapplication.ui.screens.SettingsScreen
 import com.example.newsapp.ui.topics.TopicsScreen
 import com.example.myapplication.MainEvent
 import com.example.myapplication.ui.screens.NotificationRoute
@@ -40,8 +40,8 @@ sealed class Screen(val route: String) {
         }
     }
     object Topics : Screen("topics")
-    object Debug : Screen("debug")
     object Interest : Screen("interest")
+    object Settings : Screen("settings")
 
     object Notification: Screen("Notification")
     // Route with argument
@@ -192,8 +192,8 @@ fun AppNavGraph(
                 onArticleClicked = { article ->
                     navController.navigate(Screen.Detail.createRoute(article.id))
                 },
-                onMenuClicked = { navController.navigate(Screen.Interest.route) },
-                onDebugClicked = { navController.navigate(Screen.Debug.route) },
+                onInterestClicked = { navController.navigate(Screen.Interest.route) },
+                onSettingsClicked = { navController.navigate(Screen.Settings.route) },
                 onNotificationIconClicked = {
                     navController.navigate(Screen.Notification.route)
                 },
@@ -228,8 +228,8 @@ fun AppNavGraph(
             )
         }
 
-        composable(Screen.Debug.route) {
-            DebugScreen(
+        composable(Screen.Settings.route) {
+            SettingsScreen(
                 onBackClicked = { navController.navigateUp() }
             )
         }

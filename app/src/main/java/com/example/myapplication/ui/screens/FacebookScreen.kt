@@ -3,7 +3,6 @@ package com.example.myapplication.ui.screens
 
 
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -14,7 +13,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -112,7 +110,7 @@ fun FacebookFeedList(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
 
                 items(
@@ -153,142 +151,129 @@ fun FacebookPostCard(post: FacebookPost) {
     val uriHandler = LocalUriHandler.current
     val isClickable = !safeUrl.isNullOrEmpty()
 
-    Card(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .then(
                 if (isClickable) Modifier.clickable { uriHandler.openUri(safeUrl.orEmpty()) }
                 else Modifier
-            ),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .animateContentSize(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.background,
-                    tonalElevation = 2.dp,
-                    shadowElevation = 2.dp,
-                    modifier = Modifier.size(44.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-//                        Text(
-//                            text = post.sourceName?.take(1)?.uppercase() ?: "?",
-//                            style = MaterialTheme.typography.titleMedium,
-//                            color = MaterialTheme.colorScheme.onPrimaryContainer
-//                        )
-                        val iconResId = when (post.sourceType) {
-                            SourceType.THREADS -> R.drawable.ic_threads
-                            else -> R.drawable.ic_facebook
-                        }
-
-                        Icon(
-                            painter = painterResource(id = iconResId),
-                            contentDescription = "Social Icon",
-                            modifier = Modifier.size(46.dp),
-                            tint = Color.Unspecified
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = post.sourceName ?: "Unknown Source",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
-
-                        Spacer(modifier = Modifier.width(6.dp))
-
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = TimeFormatter.formatRelativeTime(safeDate),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline
-                        )
-                        if (isClickable) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "• Bài gốc",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                }
-            }
-
-            Text(
-                text = safeContent,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = if (isExpanded) Int.MAX_VALUE else 4,
-                overflow = TextOverflow.Ellipsis,
-                onTextLayout = { layoutResult ->
-                    if (!isExpanded) {
-                        isExpandable = layoutResult.hasVisualOverflow
-                    }
-                }
             )
-
-            if (isExpandable) {
-                TextButton(
-                    onClick = { isExpanded = !isExpanded },
-                    contentPadding = PaddingValues(top = 4.dp)
-                ) {
-                    Text(
-                        text = if (isExpanded) "Thu gọn" else "Xem thêm",
-                        style = MaterialTheme.typography.labelLarge,
-                        textAlign = TextAlign.Start
-                    )
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .animateContentSize(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                val iconResId = when (post.sourceType) {
+                    SourceType.THREADS -> R.drawable.ic_threads
+                    else -> R.drawable.ic_facebook
                 }
-            }
 
-            // 🔥 Use safeImages instead of post.images
-            if (safeImages.isNotEmpty()) {
-                Box {
-                    AsyncImage(
-                        model = safeImages.first(),
-                        contentDescription = "Post Image",
-                        modifier =  Modifier
-                            .fillMaxWidth()
-                            .height(230.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .clickable { imageViewerStartIndex = 0 },
-                        contentScale = ContentScale.Crop
+                Icon(
+                    painter = painterResource(id = iconResId),
+                    contentDescription = "Social Icon",
+                    modifier = Modifier.size(40.dp),
+                    tint = Color.Unspecified
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = post.sourceName ?: "Unknown Source",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
 
-                    if (safeImages.size > 1) {
-                        Surface(
-                            shape = RoundedCornerShape(999.dp),
-                            color = Color.Black.copy(alpha = 0.6f),
-                            modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(10.dp)
-                        ) {
-                            Text(
-                                text = "1/${safeImages.size}",
-                                color = Color.White,
-                                style = MaterialTheme.typography.labelMedium,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                            )
-                        }
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = TimeFormatter.formatRelativeTime(safeDate),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                    if (isClickable) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "• Bài gốc",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             }
         }
+
+        Text(
+            text = safeContent,
+            style = MaterialTheme.typography.bodyLarge,
+            maxLines = if (isExpanded) Int.MAX_VALUE else 4,
+            overflow = TextOverflow.Ellipsis,
+            onTextLayout = { layoutResult ->
+                if (!isExpanded) {
+                    isExpandable = layoutResult.hasVisualOverflow
+                }
+            }
+        )
+
+        if (isExpandable) {
+            TextButton(
+                onClick = { isExpanded = !isExpanded },
+                contentPadding = PaddingValues(top = 4.dp)
+            ) {
+                Text(
+                    text = if (isExpanded) "Thu gọn" else "Xem thêm",
+                    style = MaterialTheme.typography.labelLarge,
+                    textAlign = TextAlign.Start
+                )
+            }
+        }
+
+        // 🔥 Use safeImages instead of post.images
+        if (safeImages.isNotEmpty()) {
+            Box {
+                AsyncImage(
+                    model = safeImages.first(),
+                    contentDescription = "Post Image",
+                    modifier =  Modifier
+                        .fillMaxWidth()
+                        .height(230.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .clickable { imageViewerStartIndex = 0 },
+                    contentScale = ContentScale.Crop
+                )
+
+                if (safeImages.size > 1) {
+                    Surface(
+                        shape = MaterialTheme.shapes.large,
+                        color = Color.Black.copy(alpha = 0.6f),
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(10.dp)
+                    ) {
+                        Text(
+                            text = "1/${safeImages.size}",
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
 
     imageViewerStartIndex?.let { startIndex ->
