@@ -2,14 +2,19 @@ package com.example.myapplication.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,7 +39,8 @@ fun ArticleList(
     onRefresh: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     headerContent: (@Composable () -> Unit)? = null,
-    skipCount: Int = 0
+    skipCount: Int = 0,
+    excludedArticleIds: Set<Int> = emptySet()
 ) {
     var isUserRefreshing by remember { mutableStateOf(false) }
     val isRefreshLoading = articles.loadState.refresh is LoadState.Loading
@@ -64,7 +70,7 @@ fun ArticleList(
         LazyColumn(
             state = listState,
             modifier = modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp),
             contentPadding = contentPadding
         ) {
 
@@ -73,36 +79,56 @@ fun ArticleList(
                     headerContent()
                 }
             }
-
-            val visibleCount = (articles.itemCount - skipCount).coerceAtLeast(0)
-
-            items(
-                count = visibleCount,
-                key = { index ->
-                    val actualIndex = index + skipCount
-                    articles[actualIndex]?.id ?: actualIndex
-                }
-            ) { index ->
-
-                val article = articles[index + skipCount]
-
-                article?.let {
-                    ArticleCard(
-                        article = it,
-                        onClick = { onArticleClicked(it) }
-                    )
-                }
-            }
-
-            if (articles.loadState.append is LoadState.Loading) {
+            if (articles.loadState.refresh is LoadState.Error) {
+                val errorState = articles.loadState.refresh as LoadState.Error
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center
+                    Column(
+                        modifier = Modifier.fillParentMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
-                        CircularProgressIndicator()
+                        Text(text = "Lỗi kết nối: ${errorState.error.localizedMessage}")
+                        Button(onClick = { articles.retry() }) {
+                            Text("Thử lại")
+                        }
+                    }
+                }
+            } else {
+                items(
+                    count = (articles.itemCount - skipCount).coerceAtLeast(0),
+                    key = { index ->
+                        val actualIndex = index + skipCount
+                        articles[actualIndex]?.id ?: actualIndex
+                    }
+                ) { index ->
+                    val actualIndex = index + skipCount
+                    val article = articles[actualIndex]
+
+                    if (article != null && !excludedArticleIds.contains(article.id)) {
+                        Column {
+                            ArticleCard(
+                                article = article,
+                                onClick = { onArticleClicked(article) }
+                            )
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 20.dp),
+                                thickness = 2.dp,
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            )
+                        }
+                    }
+                }
+
+                if (articles.loadState.append is LoadState.Loading) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
                     }
                 }
             }

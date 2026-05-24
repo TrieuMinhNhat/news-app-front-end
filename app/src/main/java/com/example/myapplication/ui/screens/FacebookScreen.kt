@@ -13,6 +13,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -36,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import android.widget.Toast
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import androidx.paging.LoadState
@@ -45,6 +50,7 @@ import com.example.myapplication.enums.SourceType
 import com.example.myapplication.models.FacebookPost
 import com.example.myapplication.R
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalContext
 import com.example.myapplication.helper.TimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,7 +60,9 @@ fun FacebookFeedList(
     refreshSignal: Int = 0,
     availableKeywords: List<String> = emptyList(),
     selectedKeyword: String? = null,
-    onKeywordSelected: (String?) -> Unit = {}
+    onKeywordSelected: (String?) -> Unit = {},
+    savedPostIds: Set<Long> = emptySet(),
+    onToggleSavedPost: ((FacebookPost) -> Unit)? = null
 ) {
 
     val isRefreshing = posts.loadState.refresh is LoadState.Loading
@@ -112,23 +120,44 @@ fun FacebookFeedList(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
-
-                items(
-                    count = posts.itemCount,
-                    key = { index -> posts[index]?.id ?: index }
-                ) { index ->
-                    posts[index]?.let { FacebookPostCard(it) }
-                }
-
-                if (posts.loadState.append is LoadState.Loading) {
+                if (posts.loadState.refresh is LoadState.Error) {
+                    val errorState = posts.loadState.refresh as LoadState.Error
                     item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(20.dp),
-                            contentAlignment = Alignment.Center
+                        Column(
+                            modifier = Modifier.fillParentMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
-                            CircularProgressIndicator()
+                            Text(text = "Lỗi kết nối: ${errorState.error.localizedMessage}")
+                            Button(onClick = { posts.retry() }) {
+                                Text("Thử lại")
+                            }
+                        }
+                    }
+                } else {
+                    items(
+                        count = posts.itemCount,
+                        key = { index -> posts[index]?.id ?: index }
+                    ) { index ->
+                        posts[index]?.let { post ->
+                            FacebookPostCard(
+                                post = post,
+                                isSaved = savedPostIds.contains(post.id),
+                                onToggleSaved = onToggleSavedPost?.let { handler -> { handler(post) } }
+                            )
+                        }
+                    }
+
+                    if (posts.loadState.append is LoadState.Loading) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(20.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
                         }
                     }
                 }
@@ -138,7 +167,11 @@ fun FacebookFeedList(
 }
 
 @Composable
-fun FacebookPostCard(post: FacebookPost) {
+fun FacebookPostCard(
+    post: FacebookPost,
+    isSaved: Boolean = false,
+    onToggleSaved: (() -> Unit)? = null
+) {
     var isExpanded by rememberSaveable(post.id) { mutableStateOf(false) }
     var isExpandable by rememberSaveable(post.id) { mutableStateOf(false) }
     var imageViewerStartIndex by rememberSaveable(post.id) { mutableStateOf<Int?>(null) }
@@ -149,20 +182,20 @@ fun FacebookPostCard(post: FacebookPost) {
     val safeDate = post.crawledAt ?: ""
     val safeUrl = post.postUrl
     val uriHandler = LocalUriHandler.current
+    val context = LocalContext.current
     val isClickable = !safeUrl.isNullOrEmpty()
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .then(
-                if (isClickable) Modifier.clickable { uriHandler.openUri(safeUrl.orEmpty()) }
-                else Modifier
-            )
             .padding(horizontal = 16.dp, vertical = 12.dp)
             .animateContentSize(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Box(
                 modifier = Modifier
                     .size(40.dp)
@@ -184,33 +217,46 @@ fun FacebookPostCard(post: FacebookPost) {
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = post.sourceName ?: "Unknown Source",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
+                Text(
+                    text = post.sourceName ?: "Unknown Source",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
 
-                    Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = TimeFormatter.formatRelativeTime(safeDate),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            }
 
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = TimeFormatter.formatRelativeTime(safeDate),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                    if (isClickable) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "• Bài gốc",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+            if (onToggleSaved != null) {
+                IconButton(
+                    onClick = {
+                        onToggleSaved()
+                        val message = if (isSaved) "Đã bỏ lưu" else "Đã lưu bài đăng"
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                     }
+                ) {
+                    Icon(
+                        imageVector = if (isSaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                        contentDescription = if (isSaved) "Bỏ lưu bài đăng" else "Lưu bài đăng",
+                        tint = if (isSaved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            if (isClickable) {
+                IconButton(
+                    onClick = { uriHandler.openUri(safeUrl.orEmpty()) }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.OpenInNew,
+                        contentDescription = "Mở bài gốc",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }

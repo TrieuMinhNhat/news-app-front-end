@@ -96,7 +96,7 @@ fun TopicBar(
                             )
                         },
                         colors = SuggestionChipDefaults.suggestionChipColors(
-                            containerColor = MaterialTheme.colorScheme.surface
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
                         ),
                         border = SuggestionChipDefaults.suggestionChipBorder(
                             enabled = true,
@@ -147,8 +147,8 @@ private fun ProfessionalFilterChip(
             selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
             selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
             selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            containerColor = Color.Transparent,
-            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            labelColor = MaterialTheme.colorScheme.onSurface
         ),
         border = FilterChipDefaults.filterChipBorder(
             enabled = true,

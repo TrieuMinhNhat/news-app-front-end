@@ -2,25 +2,25 @@ package com.example.myapplication.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Light Theme Colors (Chủ đề sáng)
-val PrimaryLight = Color(0xFF0066CC)     // Xanh dương nổi bật cho tin tức
-val SecondaryLight = Color(0xFF00B894)   // Xanh lá ngọc cho thông báo mới
-val TertiaryLight = Color(0xFFFF6B35)    // Cam cảnh báo/tin nóng
-val BackgroundLight = Color(0xFFF8F9FA)  // Nền trắng xám nhẹ
-val SurfaceLight = Color(0xFFFFFFFF)     // Bề mặt trắng
-val ErrorLight = Color(0xFFE53935)       // Đỏ cho lỗi
-val SuccessLight = Color(0xFF4CAF50)     // Xanh lá thành công
+// Light Theme Colors - Editorial Blue News Theme
+val PrimaryLight = Color(0xFF0B3D91)      // Xanh navy đậm, chuyên nghiệp
+val SecondaryLight = Color(0xFF2563EB)    // Xanh sáng hơn cho action/link
+val TertiaryLight = Color(0xFFE11D48)     // Đỏ tin nóng / breaking news
+val BackgroundLight = Color(0xFFF6F8FC)   // Nền xanh-xám rất nhẹ
+val SurfaceLight = Color(0xFFFFFFFF)      // Card trắng
+val ErrorLight = Color(0xFFDC2626)
+val SuccessLight = Color(0xFF16A34A)
 
-// Dark Theme Colors (Chủ đề tối)
-val PrimaryDark = Color(0xFF3399FF)      // Xanh dương sáng hơn
-val SecondaryDark = Color(0xFF00E5C3)    // Xanh neon cho thông báo
-val TertiaryDark = Color(0xFFFF9E7A)     // Cam nhạt
-val BackgroundDark = Color(0xFF121212)   // Nền đen than
-val SurfaceDark = Color(0xFF1E1E1E)      // Bề mặt xám đậm
-val ErrorDark = Color(0xFFEF5350)        // Đỏ nhạt
-val SuccessDark = Color(0xFF66BB6A)      // Xanh lá nhạt
+// Dark Theme Colors
+val PrimaryDark = Color(0xFF7CA7FF)       // Xanh dịu cho dark mode
+val SecondaryDark = Color(0xFF93C5FD)
+val TertiaryDark = Color(0xFFFB7185)
+val BackgroundDark = Color(0xFF0F172A)    // Navy đen, sang hơn #121212
+val SurfaceDark = Color(0xFF111827)       // Xám xanh đậm
+val ErrorDark = Color(0xFFF87171)
+val SuccessDark = Color(0xFF4ADE80)
 
-// Notification-specific colors
-val UnreadNotification = Color(0xFFFFF3E0)  // Nền vàng nhạt cho tin chưa đọc (Light)
-val UnreadNotificationDark = Color(0xFF332A1E) // Nền cho tin chưa đọc (Dark)
-val BreakingNews = Color(0xFFFF5252)       // Đỏ cho tin nóng/breaking news
+// Notification / News-specific colors
+val UnreadNotification = Color(0xFFEFF6FF)      // Xanh rất nhạt cho unread
+val UnreadNotificationDark = Color(0xFF172554)
+val BreakingNews = Color(0xFFE11D48)            // Đỏ editorial cho tin nóng

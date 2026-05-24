@@ -24,11 +24,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
+import com.example.myapplication.data.AppRefreshBus
 import com.example.myapplication.models.Article
 import com.example.myapplication.viewmodel.DeviceViewModel
 import com.example.myapplication.viewmodel.FacebookViewModel
 import com.example.myapplication.viewmodel.NewsViewModel
 import com.example.myapplication.viewmodel.NotificationViewModel
+import com.example.myapplication.viewmodel.SavedViewModel
 import kotlinx.coroutines.launch
 
 /**
@@ -41,11 +43,13 @@ fun HomeScreen(
     onInterestClicked: () -> Unit,
     onSettingsClicked: () -> Unit,
     onNotificationIconClicked: () -> Unit,
+    onSavedClicked: () -> Unit,
     initialTabIndex: Int = 0,
     initialSocialKeyword: String? = null,
     newsViewModel: NewsViewModel = hiltViewModel(),
     deviceViewModel: DeviceViewModel = hiltViewModel(),
     facebookViewModel: FacebookViewModel = hiltViewModel(),
+    savedViewModel: SavedViewModel = hiltViewModel(),
     notificationViewModel: NotificationViewModel
 ) {
     val articles = newsViewModel.articlePager.collectAsLazyPagingItems()
@@ -54,11 +58,13 @@ fun HomeScreen(
 
     val savedTopics by deviceViewModel.savedTopics.collectAsState()
     val savedKeywords by deviceViewModel.savedKeywords.collectAsState()
+    val savedSocialPostIds by savedViewModel.savedSocialPostIds.collectAsState()
     val selectedTopic by newsViewModel.selectedTopic.collectAsState()
     val isInterestMode by newsViewModel.isInterestMode.collectAsState()
     val selectedInterestKeyword by newsViewModel.selectedInterestKeyword.collectAsState()
     val notificationState by notificationViewModel.state.collectAsStateWithLifecycle()
     val searchQuery by newsViewModel.searchQuery.collectAsState()
+    val isSearchActive = searchQuery.isNotBlank()
     val tabs = listOf("Tin tức", "Mạng xã hội")
     val targetTab = initialTabIndex.coerceIn(0, tabs.lastIndex)
     val pagerState = rememberPagerState(initialPage = targetTab, pageCount = { tabs.size })
@@ -68,7 +74,25 @@ fun HomeScreen(
     var facebookRefreshSignal by remember { mutableIntStateOf(0) }
     var isSearchExpanded by rememberSaveable { mutableStateOf(false) }
     val headlineArticles by newsViewModel.headlines.collectAsState()
-    val showHeadlines = !isInterestMode && selectedTopic.isNullOrBlank()
+    val showHeadlines = !isInterestMode && selectedTopic.isNullOrBlank() && !isSearchActive
+
+    LaunchedEffect(Unit) {
+        savedViewModel.refresh()
+    }
+
+    LaunchedEffect(Unit) {
+        AppRefreshBus.refreshAll.collect {
+            newsRefreshSignal++
+            facebookRefreshSignal++
+
+            articles.refresh()
+            facebookPosts.refresh()
+
+            newsViewModel.refreshHeadlines()
+            notificationViewModel.syncFromServer()
+            savedViewModel.refresh()
+        }
+    }
 
     // If navigation args change while this screen is already alive (app is active),
     // move the pager to the requested tab.
@@ -92,6 +116,9 @@ fun HomeScreen(
         if (pagerState.currentPage != 0 && isSearchExpanded) {
             isSearchExpanded = false
         }
+        if (pagerState.currentPage != 0 && searchQuery.isNotBlank()) {
+            newsViewModel.onSearchQueryChanged("")
+        }
     }
 
     ModalNavigationDrawer(
@@ -101,6 +128,10 @@ fun HomeScreen(
                 onInterestClicked = {
                     scope.launch { drawerState.close() }
                     onInterestClicked()
+                },
+                onSavedClicked = {
+                    scope.launch { drawerState.close() }
+                    onSavedClicked()
                 },
                 onSettingsClicked = {
                     scope.launch { drawerState.close() }
@@ -115,13 +146,18 @@ fun HomeScreen(
                     pagerState = pagerState,
                     tabs = tabs,
                     isSearchExpanded = isSearchExpanded,
+                    isSearchActive = isSearchActive,
                     searchQuery = searchQuery,
                     onSearchQueryChange = newsViewModel::onSearchQueryChanged,
                     onSearch = {
                         newsViewModel.onSearchQueryChanged(searchQuery.trim())
-                        isSearchExpanded = false
                     },
-                    onToggleSearch = { isSearchExpanded = !isSearchExpanded },
+                    onToggleSearch = {
+                        if (isSearchExpanded) {
+                            newsViewModel.onSearchQueryChanged("")
+                        }
+                        isSearchExpanded = !isSearchExpanded
+                    },
                     onMenuClick = { scope.launch { drawerState.open() } },
                     onNotificationClick = onNotificationIconClicked,
                     unreadCount = notificationState.unreadCount,
@@ -143,6 +179,14 @@ fun HomeScreen(
                                 facebookPosts.refresh()
                             }
                         } else {
+                            if (index != 0) {
+                                if (isSearchExpanded) {
+                                    isSearchExpanded = false
+                                }
+                                if (searchQuery.isNotBlank()) {
+                                    newsViewModel.onSearchQueryChanged("")
+                                }
+                            }
                             scope.launch { pagerState.animateScrollToPage(index) }
                         }
                     }
@@ -164,6 +208,8 @@ fun HomeScreen(
                             onInterestKeywordSelected = newsViewModel::onInterestKeywordSelected,
                             articles = articles,
                             onArticleClicked = onArticleClicked,
+                            isSearchExpanded = isSearchExpanded,
+                            isSearchActive = isSearchActive,
                             showHeadlines = showHeadlines,
                             headlineArticles = headlineArticles,
                             refreshSignal = newsRefreshSignal,
@@ -176,7 +222,11 @@ fun HomeScreen(
                             refreshSignal = facebookRefreshSignal,
                             availableKeywords = savedKeywords.toList(),
                             selectedKeyword = selectedFacebookKeyword,
-                            onKeywordSelected = facebookViewModel::onKeywordSelected
+                            onKeywordSelected = facebookViewModel::onKeywordSelected,
+                            savedPostIds = savedSocialPostIds,
+                            onToggleSavedPost = { post ->
+                                savedViewModel.toggleSocialPost(post.id)
+                            }
                         )
                     }
                 }

@@ -7,16 +7,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,9 +28,8 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.myapplication.R
+import com.example.myapplication.helper.DateFormatter
 import com.example.myapplication.models.Article
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 @Composable
 fun ArticleCard(
@@ -42,127 +37,90 @@ fun ArticleCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        border = CardDefaults.outlinedCardBorder(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            .clickable(onClick = onClick)
+            .padding(vertical = 16.dp, horizontal = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Column {
-            // Image section (only if available)
-            if (article.imageUrl.isNotEmpty()) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(article.imageUrl.first())
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = "Article image",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentScale = ContentScale.Crop,
-                    error = painterResource(id = R.drawable.ic_broken_image),
-                    placeholder = painterResource(id = R.drawable.ic_image_placeholder)
+        if (article.imageUrl.isNotEmpty()) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(article.imageUrl.first())
+                    .crossfade(true)
+                    .build(),
+                contentDescription = "Article image",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentScale = ContentScale.Crop,
+                error = painterResource(id = R.drawable.ic_broken_image),
+                placeholder = painterResource(id = R.drawable.ic_image_placeholder)
+            )
+        }
+
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = article.title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 3,
+                lineHeight = MaterialTheme.typography.titleLarge.lineHeight * 1.15f,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            val summaryText = article.summary?.takeIf { it.isNotBlank() } ?: article.description
+            if (summaryText.isNotBlank()) {
+                Text(
+                    text = summaryText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.2f,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
-            // Text content
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Header row: author + date
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    // Author chip or "News" label
-                    val authorText = article.author?.takeIf { it.isNotBlank() } ?: "Hot News"
-                    Text(
-                        text = authorText,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-
-                    // Dot separator
-                    Box(
-                        modifier = Modifier
-                            .size(3.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.outlineVariant)
-                    )
-
-                    // Published date (if available)
-                    article.published?.let { dateString ->
-                        Text(
-                            text = formatDate(dateString),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.outline,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-
-                // Title
+                val authorText = article.author?.takeIf { it.isNotBlank() } ?: "Hot News"
                 Text(
-                    text = article.title,
-                    style = MaterialTheme.typography.titleLarge,
+                    text = authorText.uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    lineHeight = MaterialTheme.typography.titleLarge.lineHeight * 1.1f,
-                    overflow = TextOverflow.Ellipsis
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
                 )
 
-                // Summary (use summary if available, else fallback to description)
-                val summaryText = article.summary?.takeIf { it.isNotBlank() } ?: article.description
-                if (summaryText.isNotBlank()) {
+                Box(
+                    modifier = Modifier
+                        .size(4.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                )
+
+                article.published?.let { dateString ->
                     Text(
-                        text = summaryText,
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = DateFormatter.formatVietnameseDate(dateString),
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
             }
         }
-    }
-}
-
-private fun formatDate(dateString: String): String {
-    return try {
-        val inputFormat = SimpleDateFormat(
-            "EEE, dd MMM yyyy HH:mm:ss X",
-            Locale.ENGLISH
-        )
-
-        val outputFormat = SimpleDateFormat(
-            "EEEE, d 'tháng' M, yyyy",
-            Locale("vi", "VN")
-        )
-
-        val date = inputFormat.parse(dateString)
-        date?.let { formatVietnameseDate(outputFormat.format(it)) } ?: dateString
-
-    } catch (e: Exception) {
-        dateString
-    }
-}
-
-private fun formatVietnameseDate(value: String): String {
-    return value.replaceFirstChar { char ->
-        if (char.isLowerCase()) char.toString() else char.lowercase()
     }
 }

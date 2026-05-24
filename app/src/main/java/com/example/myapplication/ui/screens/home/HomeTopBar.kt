@@ -38,6 +38,7 @@ fun HomeTopBar(
     pagerState: PagerState,
     tabs: List<String>,
     isSearchExpanded: Boolean,
+    isSearchActive: Boolean,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
@@ -59,7 +60,8 @@ fun HomeTopBar(
             title = {
                 Text(
                     "Hot News",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.primary
                 )
             },
             navigationIcon = {
@@ -139,7 +141,7 @@ fun HomeTopBar(
                 )
             }
         }
-        AnimatedVisibility(visible = pagerState.currentPage == 0) {
+        AnimatedVisibility(visible = pagerState.currentPage == 0 && !isSearchExpanded && !isSearchActive) {
             TopicBar(
                 savedTopics = savedTopics,
                 savedKeywords = savedKeywords,

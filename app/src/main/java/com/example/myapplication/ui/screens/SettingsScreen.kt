@@ -41,7 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.example.myapplication.BuildConfig
 import com.example.myapplication.data.UserPreferences
 import kotlinx.coroutines.launch
-
+import com.example.myapplication.data.AppRefreshBus
 private fun normalizeApiInput(input: String): String? {
     val cleaned = input
         .trim()
@@ -194,11 +194,13 @@ fun SettingsScreen(
                         scope.launch {
                             userPreferences.saveApiBaseUrl(normalized)
                             baseUrlInput = extractHostPort(normalized)
+                            AppRefreshBus.refreshAllApis()
                             Toast.makeText(
                                 context,
                                 "API URL updated: $normalized",
                                 Toast.LENGTH_SHORT
                             ).show()
+                            onBackClicked()
                         }
                     }
                 ) {
@@ -211,11 +213,13 @@ fun SettingsScreen(
 
                         scope.launch {
                             userPreferences.saveApiBaseUrl(BuildConfig.API_BASE_URL)
+                            AppRefreshBus.refreshAllApis()
                             Toast.makeText(
                                 context,
                                 "API URL reset to build config",
                                 Toast.LENGTH_SHORT
                             ).show()
+                            onBackClicked()
                         }
                     }
                 ) {

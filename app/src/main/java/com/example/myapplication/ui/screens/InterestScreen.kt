@@ -71,7 +71,8 @@ fun InterestsScreen(
                         Text(
                             text = "Cá nhân hóa",
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Text(
                             text = "Tùy chỉnh bản tin của bạn",
@@ -152,7 +153,8 @@ fun InterestsScreen(
                     Text(
                         text = "Cá nhân hóa bản tin",
                         style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
                     Text(
                         text = "Chọn chủ đề và từ khóa để ưu tiên nội dung phù hợp nhất.",
@@ -176,7 +178,8 @@ fun InterestsScreen(
                     onClearAll = {
                         hasUserEdited = true
                         currentSelectedTopics = emptySet()
-                    }
+                    },
+                    maxInitialDisplay = 10
                 )
             }
             item {
@@ -184,7 +187,8 @@ fun InterestsScreen(
                     Text(
                         text = "Theo dõi từ khóa",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
                     Text(
                         text = "Nhận thông báo khi có bài viết chứa từ khóa này.",
@@ -251,7 +255,8 @@ fun TopicChipGrid(
             Text(
                 text = if (selectedCount > 0) "$title ($selectedCount)" else title,
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
             )
         }
 

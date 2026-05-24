@@ -11,13 +11,17 @@ fun HomeSocialTab(
     refreshSignal: Int,
     availableKeywords: List<String>,
     selectedKeyword: String?,
-    onKeywordSelected: (String?) -> Unit
+    onKeywordSelected: (String?) -> Unit,
+    savedPostIds: Set<Long> = emptySet(),
+    onToggleSavedPost: ((FacebookPost) -> Unit)? = null
 ) {
     FacebookFeedList(
         posts = posts,
         refreshSignal = refreshSignal,
         availableKeywords = availableKeywords,
         selectedKeyword = selectedKeyword,
-        onKeywordSelected = onKeywordSelected
+        onKeywordSelected = onKeywordSelected,
+        savedPostIds = savedPostIds,
+        onToggleSavedPost = onToggleSavedPost
     )
 }

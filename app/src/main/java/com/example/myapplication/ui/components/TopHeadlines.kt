@@ -31,9 +31,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.example.myapplication.helper.DateFormatter
 import com.example.myapplication.models.Article
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 @Composable
 fun TopHeadlineCard(
@@ -49,7 +48,8 @@ fun TopHeadlineCard(
             .height(240.dp)
             .clickable { onClick(article) },
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (imageUrl.isNotBlank()) {
@@ -96,12 +96,18 @@ fun TopHeadlineCard(
                         text = article.source?.takeIf { it.isNotBlank() }
                             ?: article.author?.takeIf { it.isNotBlank() }
                             ?: "News",
-                        color = Color.LightGray,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
                         style = MaterialTheme.typography.labelMedium,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .background(
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
                     )
-                    val published = article.published?.let { formatDate(it) }
+                    val published = DateFormatter.formatVietnameseDate(article.published)
                     if (!published.isNullOrBlank()) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
@@ -140,27 +146,3 @@ fun TopHeadlinesCarousel(
     }
 }
 
-private fun formatDate(dateString: String): String {
-    return try {
-        val inputFormat = SimpleDateFormat(
-            "EEE, dd MMM yyyy HH:mm:ss X",
-            Locale.ENGLISH
-        )
-
-        val outputFormat = SimpleDateFormat(
-            "EEEE, d 'tháng' M, yyyy",
-            Locale("vi", "VN")
-        )
-
-        val date = inputFormat.parse(dateString)
-        date?.let { formatVietnameseDate(outputFormat.format(it)) } ?: dateString
-    } catch (e: Exception) {
-        dateString
-    }
-}
-
-private fun formatVietnameseDate(value: String): String {
-    return value.replaceFirstChar { char ->
-        if (char.isLowerCase()) char.toString() else char.lowercase()
-    }
-}

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Interests
 import androidx.compose.material.icons.filled.Newspaper
@@ -34,7 +35,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -45,14 +45,12 @@ import com.example.myapplication.R
 @Composable
 fun HomeDrawerContent(
     onInterestClicked: () -> Unit,
+    onSavedClicked: () -> Unit,
     onSettingsClicked: () -> Unit,
     onAboutClicked: () -> Unit = {}
 ) {
     ModalDrawerSheet(
-        drawerShape = RoundedCornerShape(
-            topEnd = 28.dp,
-            bottomEnd = 28.dp
-        ),
+        drawerShape = RoundedCornerShape(0.dp),
         drawerContainerColor = MaterialTheme.colorScheme.surface,
         windowInsets = WindowInsets.statusBars
     ) {
@@ -83,7 +81,7 @@ fun HomeDrawerContent(
             },
             badge = {
                 Text(
-                    text = "New",
+                    text = "Mới!",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -97,21 +95,40 @@ fun HomeDrawerContent(
         NavigationDrawerItem(
             icon = {
                 Icon(
-                    imageVector = Icons.Default.Settings,
+                    imageVector = Icons.Default.Bookmarks,
                     contentDescription = null
                 )
             },
             label = {
                 Text(
-                    text = "Cài đặt",
+                    text = "Đã lưu",
                     fontWeight = FontWeight.Medium
                 )
             },
             selected = false,
-            onClick = onSettingsClicked,
+            onClick = onSavedClicked,
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
         )
+
+//        NavigationDrawerItem(
+//            icon = {
+//                Icon(
+//                    imageVector = Icons.Default.Settings,
+//                    contentDescription = null
+//                )
+//            },
+//            label = {
+//                Text(
+//                    text = "Cài đặt",
+//                    fontWeight = FontWeight.Medium
+//                )
+//            },
+//            selected = false,
+//            onClick = onSettingsClicked,
+//            shape = RoundedCornerShape(16.dp),
+//            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+//        )
 
         NavigationDrawerItem(
             icon = {
@@ -185,14 +202,7 @@ private fun DrawerHeader() {
         modifier = Modifier
             .fillMaxWidth()
             .height(170.dp)
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primaryContainer,
-                        MaterialTheme.colorScheme.surface
-                    )
-                )
-            )
+            .background(MaterialTheme.colorScheme.surface)
             .padding(horizontal = 24.dp, vertical = 24.dp),
         contentAlignment = Alignment.BottomStart
     ) {
@@ -202,9 +212,9 @@ private fun DrawerHeader() {
             Surface(
                 modifier = Modifier.size(64.dp),
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.primary,
-                tonalElevation = 6.dp,
-                shadowElevation = 6.dp
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp
             ) {
                 Box(
                     modifier = Modifier
@@ -213,7 +223,7 @@ private fun DrawerHeader() {
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.icon),
+                        painter = painterResource(id = R.drawable.logoapp),
                         contentDescription = "App Logo",
                         modifier = Modifier
                             .fillMaxSize()
@@ -228,7 +238,7 @@ private fun DrawerHeader() {
                     text = "Hot News",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.primary
                 )
 
                 Text(

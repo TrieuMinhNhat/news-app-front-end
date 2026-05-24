@@ -14,6 +14,7 @@ import androidx.navigation.navDeepLink
 import com.example.myapplication.ui.auth.LoginScreen
 import com.example.myapplication.ui.auth.SignUpScreen
 import com.example.myapplication.ui.screens.ArticleDetailScreen
+import com.example.myapplication.ui.screens.SavedScreen
 import com.example.myapplication.ui.screens.home.HomeScreen
 import com.example.myapplication.ui.screens.InterestsScreen
 import com.example.myapplication.ui.screens.SettingsScreen
@@ -42,6 +43,7 @@ sealed class Screen(val route: String) {
     object Topics : Screen("topics")
     object Interest : Screen("interest")
     object Settings : Screen("settings")
+    object Saved : Screen("saved")
 
     object Notification: Screen("Notification")
     // Route with argument
@@ -197,9 +199,21 @@ fun AppNavGraph(
                 onNotificationIconClicked = {
                     navController.navigate(Screen.Notification.route)
                 },
+                onSavedClicked = {
+                    navController.navigate(Screen.Saved.route)
+                },
                 initialTabIndex = initialTabIndex,
                 initialSocialKeyword = initialSocialKeyword,
                 notificationViewModel = notificationViewModel // ✅ INSTANCE
+            )
+        }
+
+        composable(Screen.Saved.route) {
+            SavedScreen(
+                onBack = { navController.navigateUp() },
+                onArticleClicked = { article ->
+                    navController.navigate(Screen.Detail.createRoute(article.id))
+                }
             )
         }
 
