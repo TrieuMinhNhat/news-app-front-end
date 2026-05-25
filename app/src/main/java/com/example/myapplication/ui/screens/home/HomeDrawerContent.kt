@@ -25,12 +25,14 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -272,4 +274,70 @@ private fun DrawerFooter() {
             color = MaterialTheme.colorScheme.outline
         )
     }
+}
+
+@Composable
+fun AboutAppDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Outlined.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        title = {
+            Text(
+                text = "Thông tin ứng dụng",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Hot News",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = "Ứng dụng đọc tin tức cá nhân hóa, giúp bạn theo dõi các bài viết mới theo chủ đề và từ khóa quan tâm.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text("• Đọc tin tức theo chủ đề")
+                    Text("• Cá nhân hóa bằng chủ đề và từ khóa")
+                    Text("• Theo dõi bài đăng mạng xã hội")
+                    Text("• Nhận thông báo tin tức thời gian thực")
+                    Text("• Tìm kiếm và lọc nội dung nhanh chóng")
+                }
+
+                Text(
+                    text = "Phiên bản: ${BuildConfig.VERSION_NAME}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
+
+                Text(
+                    text = "Nội dung được tổng hợp từ các nguồn công khai. Bản quyền và trách nhiệm nội dung thuộc về nguồn bài viết gốc.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Đã hiểu")
+            }
+        },
+        shape = RoundedCornerShape(24.dp)
+    )
 }

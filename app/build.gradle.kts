@@ -29,7 +29,7 @@ android {
         create("dev") {
             dimension = "env"
             buildConfigField("String", "API_BASE_URL", "\"http://127.0.0.1:8000/\"")
-            manifestPlaceholders["deepLinkHost"] = "192.168.1.8"
+            manifestPlaceholders["deepLinkHost"] = "127.0.0.1:8000"
         }
         create("prod") {
             dimension = "env"

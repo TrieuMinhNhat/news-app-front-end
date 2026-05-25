@@ -1,6 +1,10 @@
 package com.example.myapplication.ui.screens
 
 import android.content.Context
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
@@ -8,12 +12,7 @@ import android.speech.tts.UtteranceProgressListener
 import java.util.Locale
 
 enum class NewsTtsStatus {
-    Initializing,
-    Ready,
-    Speaking,
-    Paused,
-    Error,
-    Unsupported
+    Initializing, Ready, Speaking, Paused, Error, Unsupported
 }
 
 data class NewsTtsUiState(
@@ -38,9 +37,33 @@ class NewsTtsManager(
     private var paused: Boolean = false
     private var stoppedByUser: Boolean = false
     private var ready: Boolean = false
+    private var sessionId: Long = 0
+
+    // --- AUDIO FOCUS MANAGEMENT ---
+    private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private var audioFocusRequest: AudioFocusRequest? = null
+    private val focusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
+        if (focusChange == AudioManager.AUDIOFOCUS_LOSS || focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
+            // Auto-pause TTS if a phone call comes in or another app plays audio
+            mainHandler.post { pause() }
+        }
+    }
 
     init {
         updateState(NewsTtsUiState(status = NewsTtsStatus.Initializing, message = "Đang khởi tạo trình đọc..."))
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            audioFocusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .build()
+                )
+                .setAcceptsDelayedFocusGain(false)
+                .setOnAudioFocusChangeListener(focusChangeListener)
+                .build()
+        }
 
         tts = TextToSpeech(context.applicationContext) { status ->
             val engine = tts
@@ -61,6 +84,7 @@ class NewsTtsManager(
             engine.setPitch(1.0f)
             engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                 override fun onStart(utteranceId: String?) {
+                    if (!isCurrentUtterance(utteranceId)) return
                     updateState(
                         NewsTtsUiState(
                             status = NewsTtsStatus.Speaking,
@@ -72,7 +96,7 @@ class NewsTtsManager(
                 }
 
                 override fun onDone(utteranceId: String?) {
-                    if (paused || stoppedByUser) return
+                    if (!isCurrentUtterance(utteranceId) || paused || stoppedByUser) return
 
                     currentIndex += 1
                     if (currentIndex < chunks.size) {
@@ -80,16 +104,23 @@ class NewsTtsManager(
                     } else {
                         chunks = emptyList()
                         currentIndex = 0
+                        abandonAudioFocus() // Release audio focus when done
                         updateState(NewsTtsUiState(status = NewsTtsStatus.Ready, message = "Đã đọc xong."))
                     }
                 }
 
                 @Deprecated("Deprecated in Java")
                 override fun onError(utteranceId: String?) {
-                    updateState(NewsTtsUiState(status = NewsTtsStatus.Error, message = "Có lỗi khi đọc bài viết."))
+                    handleError(utteranceId)
                 }
 
                 override fun onError(utteranceId: String?, errorCode: Int) {
+                    handleError(utteranceId)
+                }
+
+                private fun handleError(utteranceId: String?) {
+                    if (!isCurrentUtterance(utteranceId)) return
+                    abandonAudioFocus()
                     updateState(NewsTtsUiState(status = NewsTtsStatus.Error, message = "Có lỗi khi đọc bài viết."))
                 }
             })
@@ -110,9 +141,7 @@ class NewsTtsManager(
     }
 
     fun speak(text: String) {
-        val cleanedText = text
-            .replace(Regex("\\s+"), " ")
-            .trim()
+        val cleanedText = text.replace(Regex("\\s+"), " ").trim()
 
         if (cleanedText.isBlank()) {
             updateState(NewsTtsUiState(status = NewsTtsStatus.Error, message = "Bài viết chưa có nội dung để đọc."))
@@ -123,14 +152,22 @@ class NewsTtsManager(
         currentIndex = 0
         paused = false
         stoppedByUser = false
-        speakCurrentChunk()
+        startNewSession()
+
+        if (requestAudioFocus()) {
+            speakCurrentChunk()
+        } else {
+            updateState(NewsTtsUiState(status = NewsTtsStatus.Error, message = "Không thể phát âm thanh lúc này."))
+        }
     }
 
     fun pause() {
         if (!isSpeaking()) return
         paused = true
         stoppedByUser = false
+        startNewSession()
         tts?.stop()
+        abandonAudioFocus() // Let background music resume if paused
         updateState(
             NewsTtsUiState(
                 status = NewsTtsStatus.Paused,
@@ -145,7 +182,13 @@ class NewsTtsManager(
         if (!paused || chunks.isEmpty()) return
         paused = false
         stoppedByUser = false
-        speakCurrentChunk()
+        startNewSession()
+
+        if (requestAudioFocus()) {
+            speakCurrentChunk()
+        } else {
+            updateState(NewsTtsUiState(status = NewsTtsStatus.Error, message = "Không thể phát âm thanh lúc này."))
+        }
     }
 
     fun stop() {
@@ -153,14 +196,14 @@ class NewsTtsManager(
         paused = false
         currentIndex = 0
         chunks = emptyList()
+        startNewSession()
         tts?.stop()
+        abandonAudioFocus()
         updateState(NewsTtsUiState(status = NewsTtsStatus.Ready, message = "Đã dừng đọc."))
     }
 
     fun release() {
-        stoppedByUser = true
-        paused = false
-        tts?.stop()
+        stop()
         tts?.shutdown()
         tts = null
         ready = false
@@ -168,7 +211,7 @@ class NewsTtsManager(
 
     private fun speakCurrentChunk() {
         val text = chunks.getOrNull(currentIndex) ?: return
-        val utteranceId = "news_tts_${currentIndex}_${System.currentTimeMillis()}"
+        val utteranceId = "news_tts_${sessionId}_$currentIndex"
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
     }
 
@@ -178,7 +221,37 @@ class NewsTtsManager(
         mainHandler.post { onStateChanged(state) }
     }
 
-    private fun splitForTts(text: String, maxLength: Int = 3200): List<String> {
+    private fun startNewSession() {
+        sessionId += 1
+    }
+
+    private fun isCurrentUtterance(utteranceId: String?): Boolean {
+        if (utteranceId.isNullOrBlank()) return false
+        return utteranceId.startsWith("news_tts_${sessionId}_")
+    }
+
+    // --- AUDIO FOCUS UTILS ---
+    private fun requestAudioFocus(): Boolean {
+        val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            audioFocusRequest?.let { audioManager.requestAudioFocus(it) } ?: AudioManager.AUDIOFOCUS_REQUEST_FAILED
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.requestAudioFocus(focusChangeListener, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+        }
+        return result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+    }
+
+    private fun abandonAudioFocus() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            audioFocusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.abandonAudioFocus(focusChangeListener)
+        }
+    }
+
+    // --- REDUCED MAX LENGTH FOR SMOOTHER PROGRESS & PAUSE/RESUME UX ---
+    private fun splitForTts(text: String, maxLength: Int = 400): List<String> {
         if (text.length <= maxLength) return listOf(text)
 
         val sentences = text.split(Regex("(?<=[.!?…。！？])\\s+"))

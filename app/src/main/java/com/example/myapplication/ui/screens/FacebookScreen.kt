@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -113,55 +114,109 @@ fun FacebookFeedList(
             onRefresh = { posts.refresh() },
             modifier = Modifier.weight(1f)
         ) {
+            val isEmpty = posts.loadState.refresh is LoadState.NotLoading &&
+                posts.itemCount == 0
 
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(0.dp)
-            ) {
-                if (posts.loadState.refresh is LoadState.Error) {
-                    val errorState = posts.loadState.refresh as LoadState.Error
-                    item {
-                        Column(
-                            modifier = Modifier.fillParentMaxSize(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text(text = "Lỗi kết nối: ${errorState.error.localizedMessage}")
-                            Button(onClick = { posts.retry() }) {
-                                Text("Thử lại")
+            if (isEmpty) {
+                SocialEmptyState(
+                    selectedKeyword = selectedKeyword,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    if (posts.loadState.refresh is LoadState.Error) {
+                        val errorState = posts.loadState.refresh as LoadState.Error
+                        item {
+                            Column(
+                                modifier = Modifier.fillParentMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text(text = "Lỗi kết nối: ${errorState.error.localizedMessage}")
+                                Button(onClick = { posts.retry() }) {
+                                    Text("Thử lại")
+                                }
                             }
                         }
-                    }
-                } else {
-                    items(
-                        count = posts.itemCount,
-                        key = { index -> posts[index]?.id ?: index }
-                    ) { index ->
-                        posts[index]?.let { post ->
-                            FacebookPostCard(
-                                post = post,
-                                isSaved = savedPostIds.contains(post.id),
-                                onToggleSaved = onToggleSavedPost?.let { handler -> { handler(post) } }
-                            )
+                    } else {
+                        items(
+                            count = posts.itemCount,
+                            key = { index -> posts[index]?.id ?: index }
+                        ) { index ->
+                            posts[index]?.let { post ->
+                                FacebookPostCard(
+                                    post = post,
+                                    isSaved = savedPostIds.contains(post.id),
+                                    onToggleSaved = onToggleSavedPost?.let { handler -> { handler(post) } }
+                                )
+                            }
                         }
-                    }
 
-                    if (posts.loadState.append is LoadState.Loading) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(20.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator()
+                        if (posts.loadState.append is LoadState.Loading) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(20.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator()
+                                }
                             }
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SocialEmptyState(
+    selectedKeyword: String?,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.SearchOff,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.outlineVariant
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Chưa có bài đăng phù hợp",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = if (!selectedKeyword.isNullOrBlank()) {
+                    "Hiện chưa có bài đăng mạng xã hội nào phù hợp với từ khóa \"$selectedKeyword\"."
+                } else {
+                    "Hiện chưa có bài đăng mạng xã hội nào để hiển thị."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }

@@ -73,6 +73,7 @@ fun HomeScreen(
     var newsRefreshSignal by remember { mutableIntStateOf(0) }
     var facebookRefreshSignal by remember { mutableIntStateOf(0) }
     var isSearchExpanded by rememberSaveable { mutableStateOf(false) }
+    var isAboutDialogVisible by rememberSaveable { mutableStateOf(false) }
     val headlineArticles by newsViewModel.headlines.collectAsState()
     val showHeadlines = !isInterestMode && selectedTopic.isNullOrBlank() && !isSearchActive
 
@@ -136,10 +137,17 @@ fun HomeScreen(
                 onSettingsClicked = {
                     scope.launch { drawerState.close() }
                     onSettingsClicked()
+                },
+                onAboutClicked = {
+                    scope.launch { drawerState.close() }
+                    isAboutDialogVisible = true
                 }
             )
         }
     ) {
+        if (isAboutDialogVisible) {
+            AboutAppDialog(onDismiss = { isAboutDialogVisible = false })
+        }
         Scaffold(
             topBar = {
                 HomeTopBar(
